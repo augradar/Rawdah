@@ -31,7 +31,14 @@ const store = {
   get:(k,def=null)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch{return def;}},
   set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}},
 };
-const todayKey=()=>new Date().toISOString().slice(0,10);
+
+// ── Timezone Safe Date Keys ──
+const dateKey = d => {
+  const dt = new Date(d);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+};
+const todayKey = () => dateKey(new Date());
+const isToday = d => dateKey(d) === dateKey(new Date());
 
 // ── Planner constants ──
 const HOUR_H=80,SLOT_H=20;
@@ -98,7 +105,7 @@ const ROUTINE=[
   {section:6,sectionTitle:'Madeeh & Qasidas',sectionTime:'~7 min',id:'r16',type:'Your Personal Piece',count:'3×',arabic:'اَلصَّلَاةُ عَلَى النَّبِيِّ وَالسَّلَامُ عَلَى الرَّسُوْلِ\nالشَّافِعُ الْأَبْطَحِيِّ وَمُحَمَّدٌ عَرَبِيُّ\nيَا أَللهُ يَا رَحْمٰنُ يَا رَحِيْمَ الْمُؤْمِنِيْنَ\nأَحْمَدُ الْمُصْطَفٰى سَيِّدُ الْمُرْسَلِيْنَ وَعَلٰى آلِهِ وَصَحْبِهِ أَجْمَعِيْنَ',translit:'Aṣ-ṣalātu \'alan nabiyyi was-salāmu \'alar rasūl\nAsh-shāfi\'ul abṭaḥiyyi wa Muḥammadun \'arabiyy\nYā Allāhu yā Raḥmānu yā Raḥīmal mu\'minīn\nAḥmadul Muṣṭafā sayyidul mursalīn wa \'alā ālihi wa ṣaḥbihi ajma\'īn',translation:'Blessings on the Prophet, peace upon the Messenger\nThe intercessor of the noble valley, and Muhammad the Arab\nO Allah, O Most Merciful, O Merciful to the believers\nAhmad the Chosen, Master of the Messengers — and upon all his family and companions',note:'Your personal piece from Video 3.'},
   {section:6,id:'r17',type:'Hassan ibn Thabit ؓ',count:'3×',arabic:'وَأَحْسَنُ مِنْكَ لَمْ تَرَ قَطُّ عَيْنِي\nوَأَجْمَلُ مِنْكَ لَمْ تَلِدِ النِّسَاءُ\nخُلِقْتَ مُبَرَّأً مِنْ كُلِّ عَيْبٍ\nكَأَنَّكَ قَدْ خُلِقْتَ كَمَا تَشَاءُ',translit:'Wa aḥsanu minka lam tara qaṭṭu \'aynī\nWa ajmalu minka lam talidi n-nisā\'\nKhuliqta mubarraan min kulli \'ayb\nKa\'annaka qad khuliqta kamā tashā\'',translation:'More beautiful than you, no eye has ever seen\nMore perfect than you, no woman has ever borne\nYou were created free of all defect\nAs if you were created just as you wished to be',note:'By the Prophet\'s ﷺ own companion-poet.'},
   {section:6,id:'r18',type:'Qasida Burda',count:'3×',arabic:'مَوْلَايَ صَلِّ وَسَلِّمْ دَائِمًا أَبَدًا\nعَلٰى حَبِيْبِكَ خَيْرِ الْخَلْقِ كُلِّهِمِ',translit:'Mawlāya ṣalli wa sallim dā\'iman abadā\n\'alā ḥabībika khayril khalqi kullihimi',translation:'My Master, send blessings and peace — eternally, forever\nUpon Your Beloved, the best of all creation',note:'Imam al-Busiri was paralysed, composed this in love of the Prophet ﷺ, and was healed.'},
-  {section:6,id:'r19',type:'Qad Kafani',count:'3×',arabic:'قَدْ كَفَانِي عِلْمُ رَبِّي مِنْ سُؤَالٍ وَسُؤَالِ\nفِيْهِ سِرِّي وَجِهَارِي وَمَآلِي وَحَالِي',translit:'Qad kafānī \'ilmu rabbī min su\'ālin wa su\'āl\nFīhi sirrī wa jihārī wa ma\'ālī wa ḥālī',translation:'My Lord\'s knowledge suffices me from asking and asking\nIn it is my secret and my open state, my destiny and my condition',note:'The poem that started this entire journey.'},
+  {section:6,id:'r19',type:'Qasida Qad Kafani',count:'3×',arabic:'قَدْ كَفَانِي عِلْمُ رَبِّي مِنْ سُؤَالٍ وَسُؤَالِ\nفِيْهِ سِرِّي وَجِهَارِي وَمَآلِي وَحَالِي',translit:'Qad kafānī \'ilmu rabbī min su\'ālin wa su\'āl\nFīhi sirrī wa jihārī wa ma\'ālī wa ḥālī',translation:'My Lord\'s knowledge suffices me from asking and asking\nIn it is my secret and my open state, my destiny and my condition',note:'The poem that started this entire journey.'},
   {section:7,sectionTitle:'Closing',sectionTime:'~3 min',id:'r20',type:'Closing Salawat',count:'10×',arabic:'صَلَّى اللهُ عَلٰى مُحَمَّدٍ · صَلَّى اللهُ عَلَيْهِ وَسَلَّمَ',translit:'Ṣallallāhu \'alā Muḥammad · Ṣallallāhu \'alayhi wa Sallam',translation:'May Allah\'s blessings be upon Muhammad · May His blessings and peace be upon him',note:null},
   {section:7,id:'r21',type:'Fatiha & Dua',count:'Until Jamaat',arabic:'سُورَةُ الْفَاتِحَةِ · ثُمَّ الدُّعَاءُ',translit:'Sūratul Fātiḥa — then personal dua',translation:'Close with Al-Fatiha, then pour out whatever is on your heart until the iqamah.',note:'This window is among the most blessed for dua in the entire day.'},
 ];
@@ -295,10 +302,8 @@ function Home({times,cd,next,go}){
 }
 
 // ── Layout helpers ──
-const dateKey=d=>new Date(d).toISOString().slice(0,10);
 const addDays=(d,n)=>{const r=new Date(d);r.setDate(r.getDate()+n);return r;};
 const fmtDay=d=>new Date(d).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
-const isToday=d=>dateKey(d)===dateKey(new Date());
 
 const layoutBlocks=blocks=>{
   if(!blocks.length)return[];
@@ -322,8 +327,10 @@ const layoutBlocks=blocks=>{
 // ── PLANNER ──
 function Planner({salah,setSalah,go,jumpDate,setJumpDate}){
   const [planDate,setPlanDate]=useState(()=>jumpDate||new Date());
+  const [planHijri,setPlanHijri]=useState('');
+  const [planSalah,setPlanSalah]=useState(salah);
   const dk=`rawdah_blocks_${dateKey(planDate)}`;
-  const [blocks,setBlocks]=useState(()=>store.get(dk,null)||DEF_BLOCKS);
+  const [blocks,setBlocks]=useState([]);
   const [nowY,setNowY]=useState(mtp(nowM()));
   const [drag,setDrag]=useState(null);
   const [sel,setSel]=useState(null);
@@ -339,14 +346,36 @@ function Planner({salah,setSalah,go,jumpDate,setJumpDate}){
     if(jumpDate){setPlanDate(jumpDate);setJumpDate(null);}
   },[jumpDate]);
 
-  // Load blocks when date changes
+  // Load blocks and fetch specific day's Salah times when date changes
   useEffect(()=>{
+    // Load blocks
     const stored=store.get(`rawdah_blocks_${dateKey(planDate)}`,null);
-    setBlocks(stored||store.get('rawdah_tpl',null)||DEF_BLOCKS);
+    if(stored) {
+      setBlocks(stored);
+    } else if (isToday(planDate)) {
+      setBlocks(store.get('rawdah_tpl',null)||DEF_BLOCKS);
+    } else {
+      setBlocks([]);
+    }
+    
+    // Auto-scroll
     setTimeout(()=>{
       if(wrapRef.current)wrapRef.current.scrollTop=isToday(planDate)?Math.max(0,mtp(nowM())-180):mtp(4*60);
     },100);
-  },[dateKey(planDate)]);
+
+    // Fetch Hijri and Salah times for THIS specific plan date
+    const dt = new Date(planDate);
+    const dStr = `${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}`;
+    fetch(`https://api.aladhan.com/v1/timings/${dStr}?latitude=-26.3189&longitude=27.8355&method=2`)
+      .then(r=>r.json()).then(d=>{
+        const H = d.data.date.hijri;
+        if(H) setPlanHijri(`${H.day} ${H.month.en} ${H.year} AH`);
+        const T = d.data.timings;
+        const map = {fajr_awal:'Fajr',shuruq:'Sunrise',zuhr_awal:'Dhuhr',asr_awal:'Asr',maghrib:'Maghrib',isha_awal:'Isha'};
+        setPlanSalah(salah.map(s => map[s.key] && T[map[s.key]] ? {...s, time: T[map[s.key]].slice(0,5)} : s));
+      }).catch(e => console.log(e));
+
+  },[dateKey(planDate), salah]);
 
   useEffect(()=>{const iv=setInterval(()=>setNowY(mtp(nowM())),30000);return()=>clearInterval(iv);},[]);
 
@@ -402,7 +431,7 @@ function Planner({salah,setSalah,go,jumpDate,setJumpDate}){
               <div style={{fontFamily:"'Cinzel',serif",fontSize:13,letterSpacing:.5,color:isToday(planDate)?G:'var(--tp)'}}>
                 {isToday(planDate)?'Today':fmtDay(planDate)}
               </div>
-              <div style={{fontSize:9,color:'var(--td)',letterSpacing:.5}}>{new Date(planDate).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div>
+              <div style={{fontSize:9,color:'var(--td)',letterSpacing:.5}}>{new Date(planDate).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})} {planHijri && ` · ${planHijri}`}</div>
             </div>
             <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(255,255,255,.05)',border:`1px solid ${B}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:14,color:'var(--ts)'}} onClick={()=>navDay(1)}>›</div>
             {!isToday(planDate)&&<div style={{fontSize:9,padding:'3px 8px',borderRadius:8,background:'rgba(201,168,76,.12)',border:`1px solid ${B}`,color:G,cursor:'pointer'}} onClick={()=>setPlanDate(new Date())}>Today</div>}
@@ -415,7 +444,7 @@ function Planner({salah,setSalah,go,jumpDate,setJumpDate}){
         </div>
         {/* Salah strip */}
         <div style={{display:'flex',gap:5,overflowX:'auto',paddingBottom:2}}>
-          {salah.map(s=>(
+          {planSalah.map(s=>(
             <div key={s.key} style={{flexShrink:0,border:`1px solid ${s.jamaat?'rgba(91,155,213,.3)':'rgba(201,168,76,.15)'}`,borderRadius:8,padding:'4px 8px',textAlign:'center',minWidth:44,background:s.jamaat?'rgba(91,155,213,.06)':'rgba(255,255,255,.03)'}}>
               <div style={{fontFamily:"'Amiri',serif",fontSize:s.jamaat?8:11,color:s.jamaat?'#5B9BD5':G,lineHeight:1,marginBottom:1,letterSpacing:s.jamaat?1:0,textTransform:s.jamaat?'uppercase':'none'}}>{s.jamaat?'J':(s.arabic||s.label.charAt(0))}</div>
               <div style={{fontFamily:"'Cinzel',serif",fontSize:9,color:'var(--tp)'}}>{s.time}</div>
@@ -424,7 +453,7 @@ function Planner({salah,setSalah,go,jumpDate,setJumpDate}){
         </div>
       </div>
 
-      <div ref={wrapRef} style={{flex:1,overflowY:'scroll',overflowX:'hidden',position:'relative',touchAction:drag?'none':'pan-y'}}
+      <div ref={wrapRef} style={{flex:1,overflowY:'scroll',overflowX:'hidden',position:'relative',touchAction:drag?'none':'pan-y', paddingBottom: '120px'}}
         onMouseMove={onDM} onTouchMove={onDM} onMouseUp={onDE} onTouchEnd={onDE} onMouseLeave={onDE}>
         <div style={{position:'relative',display:'flex',height:totalH}}>
           <div style={{width:48,flexShrink:0,position:'relative',height:totalH}}>
@@ -432,7 +461,8 @@ function Planner({salah,setSalah,go,jumpDate,setJumpDate}){
           </div>
           <div ref={gridRef} style={{flex:1,position:'relative',borderLeft:'1px solid rgba(201,168,76,.1)',height:totalH}}>
             {Array.from({length:24*4},(_,i)=><div key={i} style={{position:'absolute',left:0,right:0,top:i*SLOT_H,borderTop:i%4===0?'1px solid rgba(201,168,76,.1)':i%2===0?'1px dashed rgba(255,255,255,.04)':'1px solid rgba(255,255,255,.025)',pointerEvents:'none'}}/>)}
-            {salah.map(s=>{
+            
+            {planSalah.map(s=>{
               const top=mtp(parseM(s.time)),type=s.jamaat?'jm':'aw';
               return<div key={s.key} style={{position:'absolute',left:0,right:0,top,zIndex:5,pointerEvents:'none'}}>
                 <div style={{height:1,background:s.jamaat?'linear-gradient(90deg,#5B9BD5,rgba(91,155,213,.15))':'linear-gradient(90deg,var(--gold),rgba(201,168,76,.15))'}}/>
@@ -443,10 +473,12 @@ function Planner({salah,setSalah,go,jumpDate,setJumpDate}){
                 </div>
               </div>;
             })}
-            <div style={{position:'absolute',left:0,right:0,top:nowY,zIndex:7,pointerEvents:'none'}}>
+            
+            {isToday(planDate) && <div style={{position:'absolute',left:0,right:0,top:nowY,zIndex:7,pointerEvents:'none'}}>
               <div style={{position:'absolute',left:-3,width:7,height:7,borderRadius:'50%',background:'#E84040',transform:'translateY(-3px)'}}/>
               <div style={{position:'absolute',left:4,right:0,height:1,background:'rgba(232,64,64,.5)'}}/>
-            </div>
+            </div>}
+
             {laidOut.map(b=>{
               const cat=CATS[b.cat]||CATS.custom;
               const top=mtp(b.start),height=Math.max(SLOT_H,mtp(b.dur));
@@ -454,17 +486,19 @@ function Planner({salah,setSalah,go,jumpDate,setJumpDate}){
               const hasLink=!!b.link;
               const colW=100/b._tc;
               const colL=b._col*colW;
+              const zIdx = isDrag ? 20 : (b._col + 4);
+
               return<div key={b.id} style={{
                 position:'absolute',
-                left:`calc(${colL}% + 2px)`,
-                width:`calc(${colW}% - 4px)`,
+                left:`calc(${colL}% + ${b._col * 4}px)`,
+                width:`calc(${colW}% - 2px)`,
                 top,height,
                 background:cat.bg,
-                border:`1px solid ${cat.border}`,
+                border:`2px solid #0A1628`,
                 borderRadius:10,display:'flex',overflow:'hidden',
                 cursor:'pointer',
-                zIndex:isDrag?20:4,
-                boxShadow:isDrag?'0 10px 40px rgba(0,0,0,.7)':b._tc>1?'0 2px 8px rgba(0,0,0,.4)':undefined,
+                zIndex: zIdx,
+                boxShadow: isDrag ? '0 10px 40px rgba(0,0,0,.7), inset 0 0 0 1px ' + cat.border : b._tc > 1 ? '-2px 2px 8px rgba(0,0,0,.3), inset 0 0 0 1px ' + cat.border : 'inset 0 0 0 1px ' + cat.border,
                 opacity:isDrag?0.92:1
               }} onClick={()=>handleBlockTap(b)}>
                 <div style={{width:16,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',cursor:'grab',fontSize:9,color:'rgba(255,255,255,.2)',touchAction:'none'}}
@@ -748,7 +782,7 @@ function Tracker({onJumpToPlan}){
     const s=store.get('rawdah_streak',{count:0,last:''});
     const today=todayKey();
     const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
-    const yKey=yesterday.toISOString().slice(0,10);
+    const yKey=dateKey(yesterday);
     if(s.last===today)return s.count;
     if(s.last===yKey)return s.count;
     return 0;
