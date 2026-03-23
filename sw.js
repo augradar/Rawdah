@@ -25,13 +25,23 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Network first for API calls, cache first for everything else
+  // Network first for API calls and fonts
   if (e.request.url.includes('aladhan.com') || e.request.url.includes('fonts.g')) {
     e.respondWith(
       fetch(e.request).catch(() => caches.match(e.request))
     );
     return;
   }
+  
+  // Network-first for navigation and index.html to ensure PWA updates pull through
+  if (e.request.mode === 'navigate' || e.request.url.includes('index.html')) {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Cache first for everything else
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request))
   );
