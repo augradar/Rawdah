@@ -1,862 +1,890 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<meta name="theme-color" content="#020912"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="Rawdah"/>
-<link rel="manifest" href="manifest.json"/>
-<title>Rawdah — روضة</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cinzel:wght@400;500;600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet"/>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<style>
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-html,body,#root{height:100%;overflow:hidden;background:#020912;}
-body{font-family:'EB Garamond',Georgia,serif;color:#F0E6D3;}
-canvas#stars{position:fixed;inset:0;z-index:0;pointer-events:none;}
-</style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <meta name="theme-color" content="#020912" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Rawdah" />
+    <link rel="manifest" href="manifest.json" />
+    <title>Rawdah — روضة</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cinzel:wght@400;500;600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap"
+        rel="stylesheet" />
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html,
+        body,
+        #root {
+            height: 100%;
+            overflow: hidden;
+            background: #020912;
+        }
+
+        body {
+            font-family: 'EB Garamond', Georgia, serif;
+            color: #F0E6D3;
+        }
+
+        canvas#stars {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+    </style>
 </head>
+
 <body>
-<div id="root"></div>
-<script type="text/babel" data-presets="react">
-const {useState,useEffect,useRef,useCallback}=React;
+    <div id="root"></div>
+    <script type="text/babel" data-presets="react">
+        const { useState, useEffect, useRef, useCallback } = React;
 
-// ── Storage helpers ──
-const store = {
-  get:(k,def=null)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch{return def;}},
-  set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}},
-};
+        // ── Storage helpers ──
+        const store = {
+            get: (k, def = null) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } },
+            set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { } },
+        };
 
-// ── Timezone Safe Date Keys ──
-const dateKey = d => {
-  const dt = new Date(d);
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-};
-const todayKey = () => dateKey(new Date());
-const isToday = d => dateKey(d) === dateKey(new Date());
+        // ── Timezone Safe Date Keys ──
+        const dateKey = d => {
+            const dt = new Date(d);
+            return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+        };
+        const todayKey = () => dateKey(new Date());
+        const isToday = d => dateKey(d) === dateKey(new Date());
 
-// ── Planner constants ──
-const HOUR_H=80,SLOT_H=20;
-const mtp=m=>(m/60)*HOUR_H;
-const ptm=p=>Math.round(((p/HOUR_H)*60)/15)*15;
-const fmtT=m=>{const mm=((m%1440)+1440)%1440;return`${String(Math.floor(mm/60)).padStart(2,'0')}:${String(mm%60).padStart(2,'0')}`;};
-const parseM=s=>{if(!s)return 0;const[h,m]=s.split(':').map(Number);return(h||0)*60+(m||0);};
-const nowM=()=>{const n=new Date();return n.getHours()*60+n.getMinutes()+n.getSeconds()/60;};
+        // ── Planner constants ──
+        const HOUR_H = 80, SLOT_H = 20;
+        const mtp = m => (m / 60) * HOUR_H;
+        const ptm = p => Math.round(((p / HOUR_H) * 60) / 15) * 15;
+        const fmtT = m => { const mm = ((m % 1440) + 1440) % 1440; return `${String(Math.floor(mm / 60)).padStart(2, '0')}:${String(mm % 60).padStart(2, '0')}`; };
+        const parseM = s => { if (!s) return 0; const [h, m] = s.split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+        const nowM = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes() + n.getSeconds() / 60; };
 
-// ── Categories ──
-const CATS={
-  ibadah: {color:'#C9A84C',bg:'rgba(201,168,76,.18)',border:'rgba(201,168,76,.45)',icon:'📿',label:'Ibadah'},
-  work:   {color:'#5B9BD5',bg:'rgba(91,155,213,.18)',border:'rgba(91,155,213,.45)',icon:'💼',label:'Work'},
-  personal:{color:'#9B72CF',bg:'rgba(155,114,207,.18)',border:'rgba(155,114,207,.45)',icon:'📋',label:'Personal'},
-  rest:   {color:'#6DB38A',bg:'rgba(109,179,138,.18)',border:'rgba(109,179,138,.45)',icon:'😴',label:'Rest'},
-  quran:  {color:'#E8C86A',bg:'rgba(232,200,106,.18)',border:'rgba(232,200,106,.45)',icon:'📖',label:'Quran'},
-  custom: {color:'#D97B6E',bg:'rgba(217,123,110,.18)',border:'rgba(217,123,110,.45)',icon:'✨',label:'Custom'},
-};
+        // ── Categories ──
+        const CATS = {
+            ibadah: { color: '#C9A84C', bg: 'rgba(201,168,76,.18)', border: 'rgba(201,168,76,.45)', icon: '📿', label: 'Ibadah' },
+            work: { color: '#5B9BD5', bg: 'rgba(91,155,213,.18)', border: 'rgba(91,155,213,.45)', icon: '💼', label: 'Work' },
+            personal: { color: '#9B72CF', bg: 'rgba(155,114,207,.18)', border: 'rgba(155,114,207,.45)', icon: '📋', label: 'Personal' },
+            rest: { color: '#6DB38A', bg: 'rgba(109,179,138,.18)', border: 'rgba(109,179,138,.45)', icon: '😴', label: 'Rest' },
+            quran: { color: '#E8C86A', bg: 'rgba(232,200,106,.18)', border: 'rgba(232,200,106,.45)', icon: '📖', label: 'Quran' },
+            custom: { color: '#D97B6E', bg: 'rgba(217,123,110,.18)', border: 'rgba(217,123,110,.45)', icon: '✨', label: 'Custom' },
+        };
 
-// ── Default salah ──
-const DEF_SALAH=[
-  {key:'fajr_awal',label:'Fajr Awwal',arabic:'الفجر',time:'04:48',jamaat:false},
-  {key:'fajr_j',label:'Fajr Jamaat',arabic:'',time:'05:15',jamaat:true},
-  {key:'shuruq',label:'Shuruq',arabic:'الشروق',time:'06:25',jamaat:false},
-  {key:'zuhr_awal',label:'Zuhr Awwal',arabic:'الظهر',time:'12:58',jamaat:false},
-  {key:'zuhr_j',label:'Zuhr Jamaat',arabic:'',time:'13:15',jamaat:true},
-  {key:'asr_awal',label:'Asr Awwal',arabic:'العصر',time:'16:22',jamaat:false},
-  {key:'asr_j',label:'Asr Jamaat',arabic:'',time:'16:45',jamaat:true},
-  {key:'maghrib',label:'Maghrib',arabic:'المغرب',time:'19:18',jamaat:false},
-  {key:'isha_awal',label:'Isha Awwal',arabic:'العشاء',time:'20:35',jamaat:false},
-  {key:'isha_j',label:'Isha Jamaat',arabic:'',time:'20:51',jamaat:true},
-];
+        // ── Default salah ──
+        const DEF_SALAH = [
+            { key: 'fajr_awal', label: 'Fajr Awwal', arabic: 'الفجر', time: '04:48', jamaat: false },
+            { key: 'fajr_j', label: 'Fajr Jamaat', arabic: '', time: '05:15', jamaat: true },
+            { key: 'shuruq', label: 'Shuruq', arabic: 'الشروق', time: '06:25', jamaat: false },
+            { key: 'zuhr_awal', label: 'Zuhr Awwal', arabic: 'الظهر', time: '12:58', jamaat: false },
+            { key: 'zuhr_j', label: 'Zuhr Jamaat', arabic: '', time: '13:15', jamaat: true },
+            { key: 'asr_awal', label: 'Asr Awwal', arabic: 'العصر', time: '16:22', jamaat: false },
+            { key: 'asr_j', label: 'Asr Jamaat', arabic: '', time: '16:45', jamaat: true },
+            { key: 'maghrib', label: 'Maghrib', arabic: 'المغرب', time: '19:18', jamaat: false },
+            { key: 'isha_awal', label: 'Isha Awwal', arabic: 'العشاء', time: '20:35', jamaat: false },
+            { key: 'isha_j', label: 'Isha Jamaat', arabic: '', time: '20:51', jamaat: true },
+        ];
 
-const DEF_BLOCKS=[
-  {id:'t0',cat:'rest',title:'Sleep',note:'Rest before Tahajjud. The body is an amanah.',start:0,dur:225},
-  {id:'t1',cat:'ibadah',title:'Tahajjud + Salatul Tasbih',note:'Wake 45 min before Fajr Awwal. Tahajjud, then Salatul Tasbih. Close with long personal dua — Allah descends in this third of the night.',start:225,dur:63},
-  {id:'t2',cat:'ibadah',title:'Fajr Awwal Zikr Routine',note:'The full 21-recitation routine. 7 sections. ~30 min.',start:288,dur:27,link:'routine'},
-  {id:'t3',cat:'ibadah',title:'Post-Fajr Dhikr',note:'Remain seated after Fajr. Quran or dhikr until Shuruq if possible.',start:315,dur:70,link:'zikr'},
-  {id:'t4',cat:'work',title:'Morning Work Block',note:'Deep work. Your most productive window.',start:480,dur:240},
-  {id:'t5',cat:'ibadah',title:'Zuhr + Qaylulah',note:'Zuhr at jamaat, then a brief rest (qaylulah). Even 20 min resets the afternoon.',start:778,dur:57},
-  {id:'t6',cat:'work',title:'Afternoon Work Block',note:'Client meetings, admin, production.',start:840,dur:182},
-  {id:'t7',cat:'ibadah',title:'Asr → Maghrib Dua Window',note:'After Asr — duroods, zikr, and long open dua until Maghrib. One of the most powerful times of the entire day. Protect this window.',start:982,dur:176,link:'zikr'},
-  {id:'t8',cat:'quran',title:'Night Surahs',note:'Surah Mulk · Surah Waqi\'ah · Surah Sajdah. After Maghrib before Isha.',start:1158,dur:57,link:'kitab'},
-  {id:'t9',cat:'ibadah',title:'Isha + Dalail Khayrat',note:'Isha at jamaat then your daily hizb of Dalail al-Khayrat. Seal the day with salawat on the Prophet ﷺ.',start:1251,dur:69,link:'kitab'},
-  {id:'t10',cat:'rest',title:'Wind Down + Sleep',note:'Wudu. Sleep duas. Phone down. Rest. Tomorrow begins at 03:45.',start:1320,dur:120},
-];
+        const DEF_BLOCKS = [
+            { id: 't0', cat: 'rest', title: 'Sleep', note: 'Rest before Tahajjud. The body is an amanah.', start: 0, dur: 225 },
+            { id: 't1', cat: 'ibadah', title: 'Tahajjud + Salatul Tasbih', note: 'Wake 45 min before Fajr Awwal. Tahajjud, then Salatul Tasbih. Close with long personal dua — Allah descends in this third of the night.', start: 225, dur: 63 },
+            { id: 't2', cat: 'ibadah', title: 'Fajr Awwal Zikr Routine', note: 'The full 21-recitation routine. 7 sections. ~30 min.', start: 288, dur: 27, link: 'routine' },
+            { id: 't3', cat: 'ibadah', title: 'Post-Fajr Dhikr', note: 'Remain seated after Fajr. Quran or dhikr until Shuruq if possible.', start: 315, dur: 70, link: 'zikr' },
+            { id: 't4', cat: 'work', title: 'Morning Work Block', note: 'Deep work. Your most productive window.', start: 480, dur: 240 },
+            { id: 't5', cat: 'ibadah', title: 'Zuhr + Qaylulah', note: 'Zuhr at jamaat, then a brief rest (qaylulah). Even 20 min resets the afternoon.', start: 778, dur: 57 },
+            { id: 't6', cat: 'work', title: 'Afternoon Work Block', note: 'Client meetings, admin, production.', start: 840, dur: 182 },
+            { id: 't7', cat: 'ibadah', title: 'Asr → Maghrib Dua Window', note: 'After Asr — duroods, zikr, and long open dua until Maghrib. One of the most powerful times of the entire day. Protect this window.', start: 982, dur: 176, link: 'zikr' },
+            { id: 't8', cat: 'quran', title: 'Night Surahs', note: 'Surah Mulk · Surah Waqi’ah · Surah Sajdah. After Maghrib before Isha.', start: 1158, dur: 57, link: 'kitab' },
+            { id: 't9', cat: 'ibadah', title: 'Isha + Dalail Khayrat', note: 'Isha at jamaat then your daily hizb of Dalail al-Khayrat. Seal the day with salawat on the Prophet ﷺ.', start: 1251, dur: 69, link: 'kitab' },
+            { id: 't10', cat: 'rest', title: 'Wind Down + Sleep', note: 'Wudu. Sleep duas. Phone down. Rest. Tomorrow begins at 03:45.', start: 1320, dur: 120 },
+        ];
 
-const ROUTINE=[
-  {section:1,sectionTitle:'Opening — Quranic Recitation',sectionTime:'~5 min',id:'r1',type:'Quranic Recitation',count:'1×',arabic:'سُورَةُ الْفَاتِحَةِ',translit:'Sūratul Fātiḥa',translation:'The Opening Chapter — praise, acknowledgment of Allah\'s lordship, and a prayer for guidance.',note:'A complete dua in itself.'},
-  {section:1,id:'r2',type:'Quranic Recitation',count:'1× each',arabic:'سُورَةُ الْإِخْلَاصِ · الْفَلَقِ · النَّاسِ',translit:'Sūrah Al-Ikhlāṣ · Al-Falaq · An-Nās',translation:'The Three Quls — pure monotheism followed by complete protection from all evil.',note:'Together equal a third of the Quran in reward.'},
-  {section:1,id:'r3',type:'Quranic Recitation',count:'1×',arabic:'آيَةُ الْكُرْسِيِّ',translit:'Āyatul Kursī — Al-Baqarah 2:255',translation:'The Throne Verse — Allah\'s absolute sovereignty over all creation.',note:'The greatest single verse in the Quran.'},
-  {section:2,sectionTitle:'Bridge — The Divine Command',sectionTime:'~1 min',id:'r4',type:'Al-Ahzab 33:56',count:'1×',arabic:'إِنَّ اللهَ وَمَلَائِكَتَهُ يُصَلُّونَ عَلَى النَّبِيِّ يَا أَيُّهَا الَّذِينَ آمَنُوا صَلُّوا عَلَيْهِ وَسَلِّمُوا تَسْلِيمًا',translit:'Innallāha wa malā\'ikatahu yuṣallūna \'alan nabiyy — yā ayyuhal ladhīna āmanū ṣallū \'alayhi wa sallimū taslīmā',translation:'Indeed Allah and His angels send blessings upon the Prophet — O believers, send blessings upon him.',note:'Allah and His entire heavenly realm are already doing this. Now you join them.'},
-  {section:3,sectionTitle:'Salawat — Blessings on the Prophet ﷺ',sectionTime:'~3 min',id:'r5',type:'Salawat',count:'10×',arabic:'اَللّٰهُمَّ صَلِّ وَسَلِّمْ عَلٰى سَيِّدِنَا مُحَمَّدٍ',translit:'Allāhumma ṣalli wa sallim \'alā Sayyidinā Muḥammad',translation:'O Allah, send blessings and peace upon our Master Muhammad ﷺ',note:null},
-  {section:3,id:'r6',type:'Salawat Ibrahimiyyah',count:'3×',arabic:'اَللّٰهُمَّ صَلِّ عَلٰى مُحَمَّدٍ وَعَلٰى آلِ مُحَمَّدٍ كَمَا صَلَّيْتَ عَلٰى إِبْرَاهِيْمَ وَعَلٰى آلِ إِبْرَاهِيْمَ إِنَّكَ حَمِيْدٌ مَجِيْدٌ',translit:'Allāhumma ṣalli \'alā Muḥammadin wa \'alā āli Muḥammadin kamā ṣallayta \'alā Ibrāhīma — innaka Ḥamīdun Majīd',translation:'O Allah, bless Muhammad and the family of Muhammad, as You blessed Ibrahim — You are Praiseworthy, Glorious.',note:'The durood the Prophet ﷺ himself taught us.'},
-  {section:4,sectionTitle:'Istighfar',sectionTime:'~2 min',id:'r7',type:'Istighfar',count:'100×',arabic:'أَسْتَغْفِرُ اللهَ',translit:'Astaghfirullāh',translation:'I seek forgiveness from Allah.',note:'The Prophet ﷺ did this 70+ times daily — not only for sin, but as a constant return.'},
-  {section:5,sectionTitle:'Zikr & Tahlil — The Heart',sectionTime:'~12 min',id:'r8',type:'Tahlil Prelude',count:'3×',arabic:'لَا إِلٰهَ إِلَّا اللهُ حَيٌّ مَوْجُوْدٌ، حَيٌّ مَقْصُوْدٌ، حَيٌّ مَعْبُوْدٌ، حَيٌّ بَاقٍ',translit:'Lā ilāha illallāh — Ḥayyun Mawjūd, Ḥayyun Maqṣūd, Ḥayyun Ma\'būd, Ḥayyun Bāq',translation:'None worthy of worship but Allah — Ever-Living · the Desired · the Worshipped · the Everlasting.',note:'Prepare the heart before entering His remembrance.'},
-  {section:5,id:'r9',type:'Main Tahlil',count:'200×',arabic:'لَا إِلٰهَ إِلَّا اللهُ',translit:'Lā ilāha illallāh',translation:'None is worthy of worship but Allah.',note:'Breathe in on Lā ilāha — breathe out on illallāh. Slow. Rhythmic. 8–10 minutes.'},
-  {section:5,id:'r10',type:'Tasbih',count:'33× each',arabic:'سُبْحَانَ اللهِ · الْحَمْدُ للهِ · اللهُ أَكْبَرُ',translit:'Subḥānallāh · Alḥamdulillāh · Allāhu Akbar',translation:'Glory be to Allah · All praise is for Allah · Allah is the Greatest',note:'33 each = 99 total.'},
-  {section:5,id:'r11',type:'Asma ul Husna',count:'33×',arabic:'يَا لَطِيْفُ يَا اللهُ',translit:'Yā Laṭīfu Yā Allāh',translation:'O The Subtle and Gentle One — O Allah',note:'Al-Laṭīf: Allah who knows the finest details of your situation.'},
-  {section:5,id:'r12',type:'Asma ul Husna',count:'33×',arabic:'يَا حَيُّ يَا قَيُّوْمُ',translit:'Yā Ḥayyu Yā Qayyūm',translation:'O The Ever-Living, O The Self-Sustaining',note:'The Prophet ﷺ specifically recommended these two together.'},
-  {section:5,id:'r13',type:'Asma ul Husna',count:'33×',arabic:'يَا بَاسِطُ يَا وَدُوْدُ',translit:'Yā Bāsiṭu Yā Wadūd',translation:'O The Expander, O The Most Loving',note:'Al-Bāsiṭ expands provision and the heart. Al-Wadūd\'s love is unconditional.'},
-  {section:5,id:'r14',type:'Zikr / Tawakkul',count:'33×',arabic:'حَسْبُنَا اللهُ وَنِعْمَ الْوَكِيْلُ',translit:'Ḥasbunallāhu wa ni\'mal Wakīl',translation:'Allah is sufficient for us, and He is the best Disposer of affairs.',note:'Quran 3:173 — what the companions said when told an army was marching against them.'},
-  {section:5,id:'r15',type:'Zikr-Qasida',count:'3×',arabic:'لَا إِلٰهَ إِلَّا اللهُ يُحْيِي قَلْبِي ذِكْرُ اللهِ · حَسْبِي رَبِّي جَلَّ اللهُ · عَلَى النَّبِيِّ صَلَوَاتُ اللهِ',translit:'Lā ilāha illallāh — yuḥyī qalbī dhikrillāh · ḥasbī rabbī jallallāh · \'alan nabiyyi ṣalawātullāh',translation:'La ilaha illallah — Allah\'s remembrance gives life to my heart · My Lord\'s glory is enough · Blessings upon the Prophet',note:'Tahlil, tawakkul, and salawat in one breath.'},
-  {section:6,sectionTitle:'Madeeh & Qasidas',sectionTime:'~7 min',id:'r16',type:'Your Personal Piece',count:'3×',arabic:'اَلصَّلَاةُ عَلَى النَّبِيِّ وَالسَّلَامُ عَلَى الرَّسُوْلِ\nالشَّافِعُ الْأَبْطَحِيِّ وَمُحَمَّدٌ عَرَبِيُّ\nيَا أَللهُ يَا رَحْمٰنُ يَا رَحِيْمَ الْمُؤْمِنِيْنَ\nأَحْمَدُ الْمُصْطَفٰى سَيِّدُ الْمُرْسَلِيْنَ وَعَلٰى آلِهِ وَصَحْبِهِ أَجْمَعِيْنَ',translit:'Aṣ-ṣalātu \'alan nabiyyi was-salāmu \'alar rasūl\nAsh-shāfi\'ul abṭaḥiyyi wa Muḥammadun \'arabiyy\nYā Allāhu yā Raḥmānu yā Raḥīmal mu\'minīn\nAḥmadul Muṣṭafā sayyidul mursalīn wa \'alā ālihi wa ṣaḥbihi ajma\'īn',translation:'Blessings on the Prophet, peace upon the Messenger\nThe intercessor of the noble valley, and Muhammad the Arab\nO Allah, O Most Merciful, O Merciful to the believers\nAhmad the Chosen, Master of the Messengers — and upon all his family and companions',note:'Your personal piece from Video 3.'},
-  {section:6,id:'r17',type:'Hassan ibn Thabit ؓ',count:'3×',arabic:'وَأَحْسَنُ مِنْكَ لَمْ تَرَ قَطُّ عَيْنِي\nوَأَجْمَلُ مِنْكَ لَمْ تَلِدِ النِّسَاءُ\nخُلِقْتَ مُبَرَّأً مِنْ كُلِّ عَيْبٍ\nكَأَنَّكَ قَدْ خُلِقْتَ كَمَا تَشَاءُ',translit:'Wa aḥsanu minka lam tara qaṭṭu \'aynī\nWa ajmalu minka lam talidi n-nisā\'\nKhuliqta mubarraan min kulli \'ayb\nKa\'annaka qad khuliqta kamā tashā\'',translation:'More beautiful than you, no eye has ever seen\nMore perfect than you, no woman has ever borne\nYou were created free of all defect\nAs if you were created just as you wished to be',note:'By the Prophet\'s ﷺ own companion-poet.'},
-  {section:6,id:'r18',type:'Qasida Burda',count:'3×',arabic:'مَوْلَايَ صَلِّ وَسَلِّمْ دَائِمًا أَبَدًا\nعَلٰى حَبِيْبِكَ خَيْرِ الْخَلْقِ كُلِّهِمِ',translit:'Mawlāya ṣalli wa sallim dā\'iman abadā\n\'alā ḥabībika khayril khalqi kullihimi',translation:'My Master, send blessings and peace — eternally, forever\nUpon Your Beloved, the best of all creation',note:'Imam al-Busiri was paralysed, composed this in love of the Prophet ﷺ, and was healed.'},
-  {section:6,id:'r19',type:'Qasida Qad Kafani',count:'3×',arabic:'قَدْ كَفَانِي عِلْمُ رَبِّي مِنْ سُؤَالٍ وَسُؤَالِ\nفِيْهِ سِرِّي وَجِهَارِي وَمَآلِي وَحَالِي',translit:'Qad kafānī \'ilmu rabbī min su\'ālin wa su\'āl\nFīhi sirrī wa jihārī wa ma\'ālī wa ḥālī',translation:'My Lord\'s knowledge suffices me from asking and asking\nIn it is my secret and my open state, my destiny and my condition',note:'The poem that started this entire journey.'},
-  {section:7,sectionTitle:'Closing',sectionTime:'~3 min',id:'r20',type:'Closing Salawat',count:'10×',arabic:'صَلَّى اللهُ عَلٰى مُحَمَّدٍ · صَلَّى اللهُ عَلَيْهِ وَسَلَّمَ',translit:'Ṣallallāhu \'alā Muḥammad · Ṣallallāhu \'alayhi wa Sallam',translation:'May Allah\'s blessings be upon Muhammad · May His blessings and peace be upon him',note:null},
-  {section:7,id:'r21',type:'Fatiha & Dua',count:'Until Jamaat',arabic:'سُورَةُ الْفَاتِحَةِ · ثُمَّ الدُّعَاءُ',translit:'Sūratul Fātiḥa — then personal dua',translation:'Close with Al-Fatiha, then pour out whatever is on your heart until the iqamah.',note:'This window is among the most blessed for dua in the entire day.'},
-];
+        const ROUTINE = [
+            { section: 1, sectionTitle: 'Opening — Quranic Recitation', sectionTime: '~5 min', id: 'r1', type: 'Quranic Recitation', count: '1×', arabic: 'سُورَةُ الْفَاتِحَةِ', translit: 'Sūratul Fātiḥa', translation: 'The Opening Chapter — praise, acknowledgment of Allah\’s lordship, and a prayer for guidance.', note: 'A complete dua in itself.' },
+            { section: 1, id: 'r2', type: 'Quranic Recitation', count: '1× each', arabic: 'سُورَةُ الْإِخْلَاصِ · الْفَلَقِ · النَّاسِ', translit: 'Sūrah Al-Ikhlāṣ · Al-Falaq · An-Nās', translation: 'The Three Quls — pure monotheism followed by complete protection from all evil.', note: 'Together equal a third of the Quran in reward.' },
+            { section: 1, id: 'r3', type: 'Quranic Recitation', count: '1×', arabic: 'آيَةُ الْكُرْسِيِّ', translit: 'Āyatul Kursī — Al-Baqarah 2:255', translation: 'The Throne Verse — Allah\’s absolute sovereignty over all creation.', note: 'The greatest single verse in the Quran.' },
+            { section: 2, sectionTitle: 'Bridge — The Divine Command', sectionTime: '~1 min', id: 'r4', type: 'Al-Ahzab 33:56', count: '1×', arabic: 'إِنَّ اللهَ وَمَلَائِكَتَهُ يُصَلُّونَ عَلَى النَّبِيِّ يَا أَيُّهَا الَّذِينَ آمَنُوا صَلُّوا عَلَيْهِ وَسَلِّمُوا تَسْلِيمًا', translit: 'Innallāha wa malā\’ikatahu yuṣallūna \’alan nabiyy — yā ayyuhal ladhīna āmanū ṣallū \’alayhi wa sallimū taslīmā', translation: 'Indeed Allah and His angels send blessings upon the Prophet — O believers, send blessings upon him.', note: 'Allah and His entire heavenly realm are already doing this. Now you join them.' },
+            { section: 3, sectionTitle: 'Salawat — Blessings on the Prophet ﷺ', sectionTime: '~3 min', id: 'r5', type: 'Salawat', count: '10×', arabic: 'اَللّٰهُمَّ صَلِّ وَسَلِّمْ عَلٰى سَيِّدِنَا مُحَمَّدٍ', translit: 'Allāhumma ṣalli wa sallim \’alā Sayyidinā Muḥammad', translation: 'O Allah, send blessings and peace upon our Master Muhammad ﷺ', note: null },
+            { section: 3, id: 'r6', type: 'Salawat Ibrahimiyyah', count: '3×', arabic: 'اَللّٰهُمَّ صَلِّ عَلٰى مُحَمَّدٍ وَعَلٰى آلِ مُحَمَّدٍ كَمَا صَلَّيْتَ عَلٰى إِبْرَاهِيْمَ وَعَلٰى آلِ إِبْرَاهِيْمَ إِنَّكَ حَمِيْدٌ مَجِيْدٌ', translit: 'Allāhumma ṣalli \’alā Muḥammadin wa \’alā āli Muḥammadin kamā ṣallayta \’alā Ibrāhīma — innaka Ḥamīdun Majīd', translation: 'O Allah, bless Muhammad and the family of Muhammad, as You blessed Ibrahim — You are Praiseworthy, Glorious.', note: 'The durood the Prophet ﷺ himself taught us.' },
+            { section: 4, sectionTitle: 'Istighfar', sectionTime: '~2 min', id: 'r7', type: 'Istighfar', count: '100×', arabic: 'أَسْتَغْفِرُ اللهَ', translit: 'Astaghfirullāh', translation: 'I seek forgiveness from Allah.', note: 'The Prophet ﷺ did this 70+ times daily — not only for sin, but as a constant return.' },
+            { section: 5, sectionTitle: 'Zikr & Tahlil — The Heart', sectionTime: '~12 min', id: 'r8', type: 'Tahlil Prelude', count: '3×', arabic: 'لَا إِلٰهَ إِلَّا اللهُ حَيٌّ مَوْجُوْدٌ، حَيٌّ مَقْصُوْدٌ، حَيٌّ مَعْبُوْدٌ، حَيٌّ بَاقٍ', translit: 'Lā ilāha illallāh — Ḥayyun Mawjūd, Ḥayyun Maqṣūd, Ḥayyun Ma\’būd, Ḥayyun Bāq', translation: 'None worthy of worship but Allah — Ever-Living · the Desired · the Worshipped · the Everlasting.', note: 'Prepare the heart before entering His remembrance.' },
+            { section: 5, id: 'r9', type: 'Main Tahlil', count: '200×', arabic: 'لَا إِلٰهَ إِلَّا اللهُ', translit: 'Lā ilāha illallāh', translation: 'None is worthy of worship but Allah.', note: 'Breathe in on Lā ilāha — breathe out on illallāh. Slow. Rhythmic. 8–10 minutes.' },
+            { section: 5, id: 'r10', type: 'Tasbih', count: '33× each', arabic: 'سُبْحَانَ اللهِ · الْحَمْدُ للهِ · اللهُ أَكْبَرُ', translit: 'Subḥānallāh · Alḥamdulillāh · Allāhu Akbar', translation: 'Glory be to Allah · All praise is for Allah · Allah is the Greatest', note: '33 each = 99 total.' },
+            { section: 5, id: 'r11', type: 'Asma ul Husna', count: '33×', arabic: 'يَا لَطِيْفُ يَا اللهُ', translit: 'Yā Laṭīfu Yā Allāh', translation: 'O The Subtle and Gentle One — O Allah', note: 'Al-Laṭīf: Allah who knows the finest details of your situation.' },
+            { section: 5, id: 'r12', type: 'Asma ul Husna', count: '33×', arabic: 'يَا حَيُّ يَا قَيُّوْمُ', translit: 'Yā Ḥayyu Yā Qayyūm', translation: 'O The Ever-Living, O The Self-Sustaining', note: 'The Prophet ﷺ specifically recommended these two together.' },
+            { section: 5, id: 'r13', type: 'Asma ul Husna', count: '33×', arabic: 'يَا بَاسِطُ يَا وَدُوْدُ', translit: 'Yā Bāsiṭu Yā Wadūd', translation: 'O The Expander, O The Most Loving', note: 'Al-Bāsiṭ expands provision and the heart. Al-Wadūd\’s love is unconditional.' },
+            { section: 5, id: 'r14', type: 'Zikr / Tawakkul', count: '33×', arabic: 'حَسْبُنَا اللهُ وَنِعْمَ الْوَكِيْلُ', translit: 'Ḥasbunallāhu wa ni\’mal Wakīl', translation: 'Allah is sufficient for us, and He is the best Disposer of affairs.', note: 'Quran 3:173 — what the companions said when told an army was marching against them.' },
+            { section: 5, id: 'r15', type: 'Zikr-Qasida', count: '3×', arabic: 'لَا إِلٰهَ إِلَّا اللهُ يُحْيِي قَلْبِي ذِكْرُ اللهِ · حَسْبِي رَبِّي جَلَّ اللهُ · عَلَى النَّبِيِّ صَلَوَاتُ اللهِ', translit: 'Lā ilāha illallāh — yuḥyī qalbī dhikrillāh · ḥasbī rabbī jallallāh · \’alan nabiyyi ṣalawātullāh', translation: 'La ilaha illallah — Allah\’s remembrance gives life to my heart · My Lord\’s glory is enough · Blessings upon the Prophet', note: 'Tahlil, tawakkul, and salawat in one breath.' },
+            { section: 6, sectionTitle: 'Madeeh & Qasidas', sectionTime: '~7 min', id: 'r16', type: 'Your Personal Piece', count: '3×', arabic: 'اَلصَّلَاةُ عَلَى النَّبِيِّ وَالسَّلَامُ عَلَى الرَّسُوْلِ\nالشَّافِعُ الْأَبْطَحِيِّ وَمُحَمَّدٌ عَرَبِيُّ\nيَا أَللهُ يَا رَحْمٰنُ يَا رَحِيْمَ الْمُؤْمِنِيْنَ\nأَحْمَدُ الْمُصْطَفٰى سَيِّدُ الْمُرْسَلِيْنَ وَعَلٰى آلِهِ وَصَحْبِهِ أَجْمَعِيْنَ', translit: 'Aṣ-ṣalātu \’alan nabiyyi was-salāmu \’alar rasūl\nAsh-shāfi\’ul abṭaḥiyyi wa Muḥammadun \’arabiyy\nYā Allāhu yā Raḥmānu yā Raḥīmal mu\’minīn\nAḥmadul Muṣṭafā sayyidul mursalīn wa \’alā ālihi wa ṣaḥbihi ajma\’īn', translation: 'Blessings on the Prophet, peace upon the Messenger\nThe intercessor of the noble valley, and Muhammad the Arab\nO Allah, O Most Merciful, O Merciful to the believers\nAhmad the Chosen, Master of the Messengers — and upon all his family and companions', note: 'Your personal piece from Video 3.' },
+            { section: 6, id: 'r17', type: 'Hassan ibn Thabit ؓ', count: '3×', arabic: 'وَأَحْسَنُ مِنْكَ لَمْ تَرَ قَطُّ عَيْنِي\nوَأَجْمَلُ مِنْكَ لَمْ تَلِدِ النِّسَاءُ\nخُلِقْتَ مُبَرَّأً مِنْ كُلِّ عَيْبٍ\nكَأَنَّكَ قَدْ خُلِقْتَ كَمَا تَشَاءُ', translit: 'Wa aḥsanu minka lam tara qaṭṭu \’aynī\nWa ajmalu minka lam talidi n-nisā\’\nKhuliqta mubarraan min kulli \’ayb\nKa\’annaka qad khuliqta kamā tashā\’', translation: 'More beautiful than you, no eye has ever seen\nMore perfect than you, no woman has ever borne\nYou were created free of all defect\nAs if you were created just as you wished to be', note: 'By the Prophet\’s ﷺ own companion-poet.' },
+            { section: 6, id: 'r18', type: 'Qasida Burda', count: '3×', arabic: 'مَوْلَايَ صَلِّ وَسَلِّمْ دَائِمًا أَبَدًا\nعَلٰى حَبِيْبِكَ خَيْرِ الْخَلْقِ كُلِّهِمِ', translit: 'Mawlāya ṣalli wa sallim dā\’iman abadā\n\’alā ḥabībika khayril khalqi kullihimi', translation: 'My Master, send blessings and peace — eternally, forever\nUpon Your Beloved, the best of all creation', note: 'Imam al-Busiri was paralysed, composed this in love of the Prophet ﷺ, and was healed.' },
+            { section: 6, id: 'r19', type: 'Qasida Qad Kafani', count: '3×', arabic: 'قَدْ كَفَانِي عِلْمُ رَبِّي مِنْ سُؤَالٍ وَسُؤَالِ\nفِيْهِ سِرِّي وَجِهَارِي وَمَآلِي وَحَالِي', translit: 'Qad kafānī \’ilmu rabbī min su\’ālin wa su\’āl\nFīhi sirrī wa jihārī wa ma\’ālī wa ḥālī', translation: 'My Lord\’s knowledge suffices me from asking and asking\nIn it is my secret and my open state, my destiny and my condition', note: 'The poem that started this entire journey.' },
+            { section: 7, sectionTitle: 'Closing', sectionTime: '~3 min', id: 'r20', type: 'Closing Salawat', count: '10×', arabic: 'صَلَّى اللهُ عَلٰى مُحَمَّدٍ · صَلَّى اللهُ عَلَيْهِ وَسَلَّمَ', translit: 'Ṣallallāhu \’alā Muḥammad · Ṣallallāhu \’alayhi wa Sallam', translation: 'May Allah\’s blessings be upon Muhammad · May His blessings and peace be upon him', note: null },
+            { section: 7, id: 'r21', type: 'Fatiha & Dua', count: 'Until Jamaat', arabic: 'سُورَةُ الْفَاتِحَةِ · ثُمَّ الدُّعَاءُ', translit: 'Sūratul Fātiḥa — then personal dua', translation: 'Close with Al-Fatiha, then pour out whatever is on your heart until the iqamah.', note: 'This window is among the most blessed for dua in the entire day.' },
+        ];
+        const QASIDAS = [
+            {
+                id: 'q1', title: 'Qad Kafānī', sub: 'Imam Abdullah ibn Alawi al-Haddad', tag: 'Tawakkul', intro: 'The poem of complete reliance on Allah\’s knowledge. Every need, every secret, every future — He already knows. This is the poem that started our journey.', verses: [
+                    { a: 'قَدْ كَفَانِي عِلْمُ رَبِّي مِنْ سُؤَالٍ وَسُؤَالِ', t: 'Qad kafānī \’ilmu rabbī min su\’ālin wa su\’āl', tr: 'My Lord\’s knowledge suffices me from asking and asking' },
+                    { a: 'فِيْهِ سِرِّي وَجِهَارِي وَمَآلِي وَحَالِي', t: 'Fīhi sirrī wa jihārī wa ma\’ālī wa ḥālī', tr: 'In it is my secret and my open state, my destiny and my condition' },
+                    { a: 'لَيْسَ لِي فِيمَا جَرَى فِيْهِ اخْتِيَارٌ', t: 'Laysa lī fīmā jarā fīhi ikhtiyārun wa infi\’āl', tr: 'In what has passed I have no choice nor reaction' },
+                    { a: 'غَيْرُ حُسْنِ الظَّنِّ بِاللهِ وَإِخْلَاصِ الْفِعَالِ', t: 'Ghayru ḥusni ẓanni billāhi wa ikhlāṣil fi\’āl', tr: 'Except good opinion of Allah and sincerity in my actions' },
+                ]
+            },
+            {
+                id: 'q2', title: 'Qasida Burda', sub: 'Imam Muhammad al-Busiri', tag: 'Madeeh', intro: 'Composed when Imam al-Busiri was paralysed. He dreamt the Prophet ﷺ wrapped him in his mantle — and was healed.', verses: [
+                    { a: 'مَوْلَايَ صَلِّ وَسَلِّمْ دَائِمًا أَبَدًا', t: 'Mawlāya ṣalli wa sallim dā\’iman abadā', tr: 'My Master, send blessings and peace — eternally, forever' },
+                    { a: 'عَلٰى حَبِيْبِكَ خَيْرِ الْخَلْقِ كُلِّهِمِ', t: '\’alā ḥabībika khayril khalqi kullihimi', tr: 'Upon Your Beloved, the best of all creation' },
+                    { a: 'مُحَمَّدٌ سَيِّدُ الْكَوْنَيْنِ وَالثَّقَلَيْنِ', t: 'Muḥammadun sayyidul kawnaini waththaqalayn', tr: 'Muhammad is master of both worlds and both races' },
+                ]
+            },
+            {
+                id: 'q3', title: 'Hassan ibn Thabit ؓ', sub: 'The Prophet\’s ﷺ companion-poet', tag: 'Madeeh', intro: 'The most celebrated description of the Prophet ﷺ in all of classical Arabic poetry.', verses: [
+                    { a: 'وَأَحْسَنُ مِنْكَ لَمْ تَرَ قَطُّ عَيْنِي', t: 'Wa aḥsanu minka lam tara qaṭṭu \’aynī', tr: 'More beautiful than you, no eye has ever seen' },
+                    { a: 'وَأَجْمَلُ مِنْكَ لَمْ تَلِدِ النِّسَاءُ', t: 'Wa ajmalu minka lam talidi n-nisā\’', tr: 'More perfect than you, no woman has ever borne' },
+                    { a: 'خُلِقْتَ مُبَرَّأً مِنْ كُلِّ عَيْبٍ', t: 'Khuliqta mubarraan min kulli \’ayb', tr: 'You were created free of all defect' },
+                    { a: 'كَأَنَّكَ قَدْ خُلِقْتَ كَمَا تَشَاءُ', t: 'Ka\’annaka qad khuliqta kamā tashā\’', tr: 'As if you were created just as you wished to be' },
+                ]
+            },
+        ];
 
-const QASIDAS=[
-  {id:'q1',title:'Qad Kafānī',sub:'Imam Abdullah ibn Alawi al-Haddad',tag:'Tawakkul',intro:'The poem of complete reliance on Allah\'s knowledge. Every need, every secret, every future — He already knows. This is the poem that started our journey.',verses:[
-    {a:'قَدْ كَفَانِي عِلْمُ رَبِّي مِنْ سُؤَالٍ وَسُؤَالِ',t:'Qad kafānī \'ilmu rabbī min su\'ālin wa su\'āl',tr:'My Lord\'s knowledge suffices me from asking and asking'},
-    {a:'فِيْهِ سِرِّي وَجِهَارِي وَمَآلِي وَحَالِي',t:'Fīhi sirrī wa jihārī wa ma\'ālī wa ḥālī',tr:'In it is my secret and my open state, my destiny and my condition'},
-    {a:'لَيْسَ لِي فِيمَا جَرَى فِيْهِ اخْتِيَارٌ',t:'Laysa lī fīmā jarā fīhi ikhtiyārun wa infi\'āl',tr:'In what has passed I have no choice nor reaction'},
-    {a:'غَيْرُ حُسْنِ الظَّنِّ بِاللهِ وَإِخْلَاصِ الْفِعَالِ',t:'Ghayru ḥusni ẓanni billāhi wa ikhlāṣil fi\'āl',tr:'Except good opinion of Allah and sincerity in my actions'},
-  ]},
-  {id:'q2',title:'Qasida Burda',sub:'Imam Muhammad al-Busiri',tag:'Madeeh',intro:'Composed when Imam al-Busiri was paralysed. He dreamt the Prophet ﷺ wrapped him in his mantle — and was healed.',verses:[
-    {a:'مَوْلَايَ صَلِّ وَسَلِّمْ دَائِمًا أَبَدًا',t:'Mawlāya ṣalli wa sallim dā\'iman abadā',tr:'My Master, send blessings and peace — eternally, forever'},
-    {a:'عَلٰى حَبِيْبِكَ خَيْرِ الْخَلْقِ كُلِّهِمِ',t:'\'alā ḥabībika khayril khalqi kullihimi',tr:'Upon Your Beloved, the best of all creation'},
-    {a:'مُحَمَّدٌ سَيِّدُ الْكَوْنَيْنِ وَالثَّقَلَيْنِ',t:'Muḥammadun sayyidul kawnaini waththaqalayn',tr:'Muhammad is master of both worlds and both races'},
-  ]},
-  {id:'q3',title:'Hassan ibn Thabit ؓ',sub:'The Prophet\'s ﷺ companion-poet',tag:'Madeeh',intro:'The most celebrated description of the Prophet ﷺ in all of classical Arabic poetry.',verses:[
-    {a:'وَأَحْسَنُ مِنْكَ لَمْ تَرَ قَطُّ عَيْنِي',t:'Wa aḥsanu minka lam tara qaṭṭu \'aynī',tr:'More beautiful than you, no eye has ever seen'},
-    {a:'وَأَجْمَلُ مِنْكَ لَمْ تَلِدِ النِّسَاءُ',t:'Wa ajmalu minka lam talidi n-nisā\'',tr:'More perfect than you, no woman has ever borne'},
-    {a:'خُلِقْتَ مُبَرَّأً مِنْ كُلِّ عَيْبٍ',t:'Khuliqta mubarraan min kulli \'ayb',tr:'You were created free of all defect'},
-    {a:'كَأَنَّكَ قَدْ خُلِقْتَ كَمَا تَشَاءُ',t:'Ka\'annaka qad khuliqta kamā tashā\'',tr:'As if you were created just as you wished to be'},
-  ]},
-];
+        const DUAS = [
+            { id: 'd1', cat: 'Morning', title: 'Upon Waking', a: 'الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُورُ', t: 'Alḥamdulillāhil ladhī aḥyānā ba\’da mā amātanā wa ilayhin nushūr', tr: 'All praise to Allah who gave us life after death, and to Him is the resurrection.', src: 'Bukhari' },
+            { id: 'd2', cat: 'Morning', title: 'Leaving Home', a: 'بِسْمِ اللهِ تَوَكَّلْتُ عَلَى اللهِ وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللهِ', t: 'Bismillāhi tawakkaltu \’alallāhi wa lā ḥawla wa lā quwwata illā billāh', tr: 'In the name of Allah, I place my trust in Allah — there is no power except with Allah.', src: 'Abu Dawud, Tirmidhi' },
+            { id: 'd3', cat: 'Morning', title: 'Looking in the Mirror', a: 'اللَّهُمَّ أَنْتَ حَسَّنْتَ خَلْقِي فَحَسِّنْ خُلُقِي', t: 'Allāhumma anta ḥassanta khalqī faḥassin khuluqī', tr: 'O Allah, You have beautified my appearance so beautify my character.', src: 'Ahmad' },
+            { id: 'd4', cat: 'Masjid', title: 'Entering Masjid', a: 'اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ', t: 'Allāhummaf taḥ lī abwāba raḥmatik', tr: 'O Allah, open the gates of Your mercy for me.', src: 'Muslim' },
+            { id: 'd5', cat: 'Masjid', title: 'Leaving Masjid', a: 'اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ', t: 'Allāhumma innī as\’aluka min faḍlik', tr: 'O Allah, I ask of You Your favour.', src: 'Muslim' },
+            { id: 'd6', cat: 'Food', title: 'Before Eating', a: 'بِسْمِ اللهِ وَعَلَى بَرَكَةِ اللهِ', t: 'Bismillāhi wa \’alā barakatillāh', tr: 'In the name of Allah and with the blessings of Allah.', src: 'Abu Dawud' },
+            { id: 'd7', cat: 'Food', title: 'After Eating', a: 'الْحَمْدُ لِلَّهِ الَّذِي أَطْعَمَنَا وَسَقَانَا وَجَعَلَنَا مُسْلِمِيْنَ', t: 'Alḥamdulillāhil ladhī aṭ\’amanā wa saqānā wa ja\’alanā muslimīn', tr: 'All praise to Allah who fed us, gave us drink, and made us Muslims.', src: 'Abu Dawud, Tirmidhi' },
+            { id: 'd8', cat: 'Night', title: 'Before Sleeping', a: 'بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا', t: 'Bismika Allāhumma amūtu wa aḥyā', tr: 'In Your name, O Allah, I die and I live.', src: 'Bukhari' },
+            { id: 'd9', cat: 'Night', title: 'Waking at Night', a: 'لَا إِلٰهَ إِلَّا اللهُ وَحْدَهُ لَا شَرِيكَ لَهُ', t: 'Lā ilāha illallāhu waḥdahu lā sharīka lah', tr: 'There is no god but Allah alone, with no partner.', src: 'Bukhari' },
+            { id: 'd10', cat: 'Distress', title: 'Dua of Yunus ؑ', a: 'لَا إِلٰهَ إِلَّا أَنْتَ سُبْحَانَكَ إِنِّي كُنْتُ مِنَ الْظَّالِمِيْنَ', t: 'Lā ilāha illā anta subḥānaka innī kuntu minaẓ ẓālimīn', tr: 'There is no god but You — glory be to You — indeed I was of the wrongdoers.', src: 'Tirmidhi' },
+            { id: 'd11', cat: 'Distress', title: 'For Worry & Grief', a: 'اللَّهُمَّ إِنِّي عَبْدُكَ ابْنُ عَبْدِكَ نَاصِيَتِي بِيَدِكَ مَاضٍ فِيَّ حُكْمُكَ عَدْلٌ فِيَّ قَضَاؤُكَ', t: 'Allāhumma innī \’abduka ibnu \’abdika nāṣiyatī biyadika māḍin fiyya ḥukmuka \’adlun fiyya qaḍā\’uk', tr: 'O Allah, I am Your servant, son of Your servant. My forelock is in Your hand. Your decree upon me is just.', src: 'Ahmad' },
+            { id: 'd12', cat: 'Distress', title: 'When Something Difficult Happens', a: 'إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ اللَّهُمَّ أْجُرْنِي فِي مُصِيبَتِي', t: 'Innā lillāhi wa innā ilayhi rāji\’ūn — Allāhumma ajurnī fī muṣībatī', tr: 'Indeed we belong to Allah and to Him we return — O Allah, reward me in my trial.', src: 'Muslim' },
+            { id: 'd13', cat: 'Travel', title: 'Beginning a Journey', a: 'اللَّهُمَّ إِنَّا نَسْأَلُكَ فِي سَفَرِنَا هَذَا الْبِرَّ وَالتَّقْوَى', t: 'Allāhumma innā nas\’aluka fī safarinā hādhal birra wattaqwā', tr: 'O Allah, we ask You for righteousness and piety in this journey.', src: 'Muslim' },
+        ];
 
-const DUAS=[
-  {id:'d1',cat:'Morning',title:'Upon Waking',a:'الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُورُ',t:'Alḥamdulillāhil ladhī aḥyānā ba\'da mā amātanā wa ilayhin nushūr',tr:'All praise to Allah who gave us life after death, and to Him is the resurrection.',src:'Bukhari'},
-  {id:'d2',cat:'Morning',title:'Leaving Home',a:'بِسْمِ اللهِ تَوَكَّلْتُ عَلَى اللهِ وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللهِ',t:'Bismillāhi tawakkaltu \'alallāhi wa lā ḥawla wa lā quwwata illā billāh',tr:'In the name of Allah, I place my trust in Allah — there is no power except with Allah.',src:'Abu Dawud, Tirmidhi'},
-  {id:'d3',cat:'Morning',title:'Looking in the Mirror',a:'اللَّهُمَّ أَنْتَ حَسَّنْتَ خَلْقِي فَحَسِّنْ خُلُقِي',t:'Allāhumma anta ḥassanta khalqī faḥassin khuluqī',tr:'O Allah, You have beautified my appearance so beautify my character.',src:'Ahmad'},
-  {id:'d4',cat:'Masjid',title:'Entering Masjid',a:'اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ',t:'Allāhummaf taḥ lī abwāba raḥmatik',tr:'O Allah, open the gates of Your mercy for me.',src:'Muslim'},
-  {id:'d5',cat:'Masjid',title:'Leaving Masjid',a:'اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ',t:'Allāhumma innī as\'aluka min faḍlik',tr:'O Allah, I ask of You Your favour.',src:'Muslim'},
-  {id:'d6',cat:'Food',title:'Before Eating',a:'بِسْمِ اللهِ وَعَلَى بَرَكَةِ اللهِ',t:'Bismillāhi wa \'alā barakatillāh',tr:'In the name of Allah and with the blessings of Allah.',src:'Abu Dawud'},
-  {id:'d7',cat:'Food',title:'After Eating',a:'الْحَمْدُ لِلَّهِ الَّذِي أَطْعَمَنَا وَسَقَانَا وَجَعَلَنَا مُسْلِمِيْنَ',t:'Alḥamdulillāhil ladhī aṭ\'amanā wa saqānā wa ja\'alanā muslimīn',tr:'All praise to Allah who fed us, gave us drink, and made us Muslims.',src:'Abu Dawud, Tirmidhi'},
-  {id:'d8',cat:'Night',title:'Before Sleeping',a:'بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا',t:'Bismika Allāhumma amūtu wa aḥyā',tr:'In Your name, O Allah, I die and I live.',src:'Bukhari'},
-  {id:'d9',cat:'Night',title:'Waking at Night',a:'لَا إِلٰهَ إِلَّا اللهُ وَحْدَهُ لَا شَرِيكَ لَهُ',t:'Lā ilāha illallāhu waḥdahu lā sharīka lah',tr:'There is no god but Allah alone, with no partner.',src:'Bukhari'},
-  {id:'d10',cat:'Distress',title:'Dua of Yunus ؑ',a:'لَا إِلٰهَ إِلَّا أَنْتَ سُبْحَانَكَ إِنِّي كُنْتُ مِنَ الْظَّالِمِيْنَ',t:'Lā ilāha illā anta subḥānaka innī kuntu minaẓ ẓālimīn',tr:'There is no god but You — glory be to You — indeed I was of the wrongdoers.',src:'Tirmidhi'},
-  {id:'d11',cat:'Distress',title:'For Worry & Grief',a:'اللَّهُمَّ إِنِّي عَبْدُكَ ابْنُ عَبْدِكَ نَاصِيَتِي بِيَدِكَ مَاضٍ فِيَّ حُكْمُكَ عَدْلٌ فِيَّ قَضَاؤُكَ',t:'Allāhumma innī \'abduka ibnu \'abdika nāṣiyatī biyadika māḍin fiyya ḥukmuka \'adlun fiyya qaḍā\'uk',tr:'O Allah, I am Your servant, son of Your servant. My forelock is in Your hand. Your decree upon me is just.',src:'Ahmad'},
-  {id:'d12',cat:'Distress',title:'When Something Difficult Happens',a:'إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ اللَّهُمَّ أْجُرْنِي فِي مُصِيبَتِي',t:'Innā lillāhi wa innā ilayhi rāji\'ūn — Allāhumma ajurnī fī muṣībatī',tr:'Indeed we belong to Allah and to Him we return — O Allah, reward me in my trial.',src:'Muslim'},
-  {id:'d13',cat:'Travel',title:'Beginning a Journey',a:'اللَّهُمَّ إِنَّا نَسْأَلُكَ فِي سَفَرِنَا هَذَا الْبِرَّ وَالتَّقْوَى',t:'Allāhumma innā nas\'aluka fī safarinā hādhal birra wattaqwā',tr:'O Allah, we ask You for righteousness and piety in this journey.',src:'Muslim'},
-];
+        const NIGHT_SURAHS = [
+            { id: 'ns1', title: 'Surah Al-Mulk', arabic: 'تَبَارَكَ الَّذِي بِيَدِهِ الْمُلْكُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ', note: 'Protects from the punishment of the grave. The Prophet ﷺ would not sleep until he recited it. 30 verses.', virtue: 'Intercedes for its reciter until he is forgiven.' },
+            { id: 'ns2', title: 'Surah Al-Waqi\’ah', arabic: 'إِذَا وَقَعَتِ الْوَاقِعَةُ لَيْسَ لِوَقْعَتِهَا كَاذِبَةٌ', note: 'Protects from poverty. Ibn Mas\’ud ؓ recited it every night on the advice of the Prophet ﷺ. 96 verses.', virtue: 'Whoever recites it every night, poverty will never afflict him.' },
+            { id: 'ns3', title: 'Surah Al-Sajdah', arabic: 'الم تَنزِيلُ الْكِتَابِ لَا رَيْبَ فِيهِ مِن رَّبِّ الْعَالَمِينَ', note: 'The Prophet ﷺ would not sleep until he recited Surah Sajdah and Surah Al-Mulk. 30 verses.', virtue: 'On the Day of Judgement it intercedes for its reciter.' },
+        ];
 
-const NIGHT_SURAHS=[
-  {id:'ns1',title:'Surah Al-Mulk',arabic:'تَبَارَكَ الَّذِي بِيَدِهِ الْمُلْكُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ',note:'Protects from the punishment of the grave. The Prophet ﷺ would not sleep until he recited it. 30 verses.',virtue:'Intercedes for its reciter until he is forgiven.'},
-  {id:'ns2',title:'Surah Al-Waqi\'ah',arabic:'إِذَا وَقَعَتِ الْوَاقِعَةُ لَيْسَ لِوَقْعَتِهَا كَاذِبَةٌ',note:'Protects from poverty. Ibn Mas\'ud ؓ recited it every night on the advice of the Prophet ﷺ. 96 verses.',virtue:'Whoever recites it every night, poverty will never afflict him.'},
-  {id:'ns3',title:'Surah Al-Sajdah',arabic:'الم تَنزِيلُ الْكِتَابِ لَا رَيْبَ فِيهِ مِن رَّبِّ الْعَالَمِينَ',note:'The Prophet ﷺ would not sleep until he recited Surah Sajdah and Surah Al-Mulk. 30 verses.',virtue:'On the Day of Judgement it intercedes for its reciter.'},
-];
+        const HADITH_LIST = [
+            { text: 'The best of deeds are those done consistently, even if they are small.', src: 'Bukhari & Muslim' },
+            { text: 'Allah descends to the lowest heaven in the last third of every night and says: Who is calling upon Me that I may answer him?', src: 'Bukhari' },
+            { text: 'Whoever reads Ayatul Kursi after every obligatory prayer, nothing prevents him from entering Paradise but death.', src: 'Al-Nasa\’i' },
+            { text: 'Make things easy, do not make them difficult. Give glad tidings and do not repel.', src: 'Bukhari' },
+            { text: 'The strong believer is better and more beloved to Allah than the weak believer, while there is good in both.', src: 'Muslim' },
+            { text: 'Whoever says SubhanAllah wa bihamdihi 100 times in a day, his sins will be forgiven even if they are like the foam of the sea.', src: 'Bukhari' },
+            { text: 'Two words are light on the tongue, heavy on the Scale, beloved to the Most Merciful: SubhanAllahi wa bihamdih, SubhanAllahil Azim.', src: 'Bukhari & Muslim' },
+        ];
 
-const HADITH_LIST=[
-  {text:'The best of deeds are those done consistently, even if they are small.',src:'Bukhari & Muslim'},
-  {text:'Allah descends to the lowest heaven in the last third of every night and says: Who is calling upon Me that I may answer him?',src:'Bukhari'},
-  {text:'Whoever reads Ayatul Kursi after every obligatory prayer, nothing prevents him from entering Paradise but death.',src:'Al-Nasa\'i'},
-  {text:'Make things easy, do not make them difficult. Give glad tidings and do not repel.',src:'Bukhari'},
-  {text:'The strong believer is better and more beloved to Allah than the weak believer, while there is good in both.',src:'Muslim'},
-  {text:'Whoever says SubhanAllah wa bihamdihi 100 times in a day, his sins will be forgiven even if they are like the foam of the sea.',src:'Bukhari'},
-  {text:'Two words are light on the tongue, heavy on the Scale, beloved to the Most Merciful: SubhanAllahi wa bihamdih, SubhanAllahil Azim.',src:'Bukhari & Muslim'},
-];
+        const ZIKR_LIST = [
+            { a: 'لَا إِلٰهَ إِلَّا اللهُ', t: 'Lā ilāha illallāh', tr: 'None is worthy of worship but Allah', n: 200 },
+            { a: 'أَسْتَغْفِرُ اللهَ', t: 'Astaghfirullāh', tr: 'I seek forgiveness from Allah', n: 100 },
+            { a: 'سُبْحَانَ اللهِ', t: 'Subḥānallāh', tr: 'Glory be to Allah', n: 33 },
+            { a: 'الْحَمْدُ للهِ', t: 'Alḥamdulillāh', tr: 'All praise is for Allah', n: 33 },
+            { a: 'اللهُ أَكْبَرُ', t: 'Allāhu Akbar', tr: 'Allah is the Greatest', n: 33 },
+            { a: 'يَا لَطِيْفُ يَا اللهُ', t: 'Yā Laṭīfu Yā Allāh', tr: 'O The Subtle One — O Allah', n: 33 },
+            { a: 'يَا حَيُّ يَا قَيُّوْمُ', t: 'Yā Ḥayyu Yā Qayyūm', tr: 'O The Ever-Living, O The Self-Sustaining', n: 33 },
+            { a: 'يَا بَاسِطُ يَا وَدُوْدُ', t: 'Yā Bāsiṭu Yā Wadūd', tr: 'O The Expander, O The Most Loving', n: 33 },
+            { a: 'حَسْبُنَا اللهُ وَنِعْمَ الْوَكِيْلُ', t: 'Ḥasbunallāhu wa ni\’mal Wakīl', tr: 'Allah is sufficient — best Disposer of affairs', n: 33 },
+            { a: 'اَللّٰهُمَّ صَلِّ وَسَلِّمْ عَلٰى سَيِّدِنَا مُحَمَّدٍ', t: 'Allāhumma ṣalli wa sallim \’alā Sayyidinā Muḥammad', tr: 'O Allah, bless and grant peace to our Master Muhammad ﷺ', n: 100 },
+        ];
 
-const ZIKR_LIST=[
-  {a:'لَا إِلٰهَ إِلَّا اللهُ',t:'Lā ilāha illallāh',tr:'None is worthy of worship but Allah',n:200},
-  {a:'أَسْتَغْفِرُ اللهَ',t:'Astaghfirullāh',tr:'I seek forgiveness from Allah',n:100},
-  {a:'سُبْحَانَ اللهِ',t:'Subḥānallāh',tr:'Glory be to Allah',n:33},
-  {a:'الْحَمْدُ للهِ',t:'Alḥamdulillāh',tr:'All praise is for Allah',n:33},
-  {a:'اللهُ أَكْبَرُ',t:'Allāhu Akbar',tr:'Allah is the Greatest',n:33},
-  {a:'يَا لَطِيْفُ يَا اللهُ',t:'Yā Laṭīfu Yā Allāh',tr:'O The Subtle One — O Allah',n:33},
-  {a:'يَا حَيُّ يَا قَيُّوْمُ',t:'Yā Ḥayyu Yā Qayyūm',tr:'O The Ever-Living, O The Self-Sustaining',n:33},
-  {a:'يَا بَاسِطُ يَا وَدُوْدُ',t:'Yā Bāsiṭu Yā Wadūd',tr:'O The Expander, O The Most Loving',n:33},
-  {a:'حَسْبُنَا اللهُ وَنِعْمَ الْوَكِيْلُ',t:'Ḥasbunallāhu wa ni\'mal Wakīl',tr:'Allah is sufficient — best Disposer of affairs',n:33},
-  {a:'اَللّٰهُمَّ صَلِّ وَسَلِّمْ عَلٰى سَيِّدِنَا مُحَمَّدٍ',t:'Allāhumma ṣalli wa sallim \'alā Sayyidinā Muḥammad',tr:'O Allah, bless and grant peace to our Master Muhammad ﷺ',n:100},
-];
+        const TRACK_ITEMS = [
+            { id: 'ti1', label: 'Tahajjud', sub: 'Before Fajr Awwal' },
+            { id: 'ti2', label: 'Fajr Zikr Routine', sub: '21 recitations complete' },
+            { id: 'ti3', label: 'Fajr Jamaat', sub: 'At the masjid' },
+            { id: 'ti4', label: 'Asr Duas & Zikr', sub: 'Duroods · Zikr · Dua window' },
+            { id: 'ti5', label: 'Night Surahs', sub: 'Mulk · Waqi\’ah after Maghrib' },
+            { id: 'ti6', label: 'Dalail Khayrat', sub: 'Daily hizb after Isha' },
+        ];
 
-const TRACK_ITEMS=[
-  {id:'ti1',label:'Tahajjud',sub:'Before Fajr Awwal'},
-  {id:'ti2',label:'Fajr Zikr Routine',sub:'21 recitations complete'},
-  {id:'ti3',label:'Fajr Jamaat',sub:'At the masjid'},
-  {id:'ti4',label:'Asr Duas & Zikr',sub:'Duroods · Zikr · Dua window'},
-  {id:'ti5',label:'Night Surahs',sub:'Mulk · Waqi\'ah after Maghrib'},
-  {id:'ti6',label:'Dalail Khayrat',sub:'Daily hizb after Isha'},
-];
+        // ── Utils ──
+        const toSecs = s => { if (!s || s === '—') return 0; const [h, m] = s.split(':').map(Number); return (h || 0) * 3600 + (m || 0) * 60; };
+        const fmtCd = s => { const t = Math.max(0, Math.floor(s)); return [Math.floor(t / 3600), Math.floor((t % 3600) / 60), t % 60].map(n => String(n).padStart(2, '0')).join(':'); };
+        const getHijri = () => {
+            const months = ['Muharram', 'Ṣafar', 'Rabī\’ al-Awwal', 'Rabī\’ al-Thānī', 'Jumādā al-Ūlā', 'Jumādā al-Ākhirah', 'Rajab', 'Sha\’bān', 'Ramaḍān', 'Shawwāl', 'Dhul Qa\’dah', 'Dhul Ḥijjah'];
+            const jd = Math.floor(Date.now() / 86400000 + 2440587.5);
+            let l = jd - 1948440 + 10632, n = Math.floor((l - 1) / 10631); l -= 10631 * n - 354;
+            const j = Math.floor((10985 - l) / 5316) * Math.floor((50 * l) / 17719) + Math.floor(l / 5670) * Math.floor((43 * l) / 15238);
+            l -= Math.floor((30 - j) / 15) * Math.floor((17719 * j) / 50) + Math.floor(j / 16) * Math.floor((15238 * j) / 43);
+            const d = l - 29 * Math.floor(l / 29), mo = Math.floor((11 * l + 1) / 325), y = 30 * n + j - 30;
+            return `${d} ${months[mo - 1]} ${y} AH`;
+        };
 
-// ── Utils ──
-const toSecs=s=>{if(!s||s==='—')return 0;const[h,m]=s.split(':').map(Number);return(h||0)*3600+(m||0)*60;};
-const fmtCd=s=>{const t=Math.max(0,Math.floor(s));return[Math.floor(t/3600),Math.floor((t%3600)/60),t%60].map(n=>String(n).padStart(2,'0')).join(':');};
-const getHijri=()=>{
-  const months=['Muharram','Ṣafar','Rabī\' al-Awwal','Rabī\' al-Thānī','Jumādā al-Ūlā','Jumādā al-Ākhirah','Rajab','Sha\'bān','Ramaḍān','Shawwāl','Dhul Qa\'dah','Dhul Ḥijjah'];
-  const jd=Math.floor(Date.now()/86400000+2440587.5);
-  let l=jd-1948440+10632,n=Math.floor((l-1)/10631);l-=10631*n-354;
-  const j=Math.floor((10985-l)/5316)*Math.floor((50*l)/17719)+Math.floor(l/5670)*Math.floor((43*l)/15238);
-  l-=Math.floor((30-j)/15)*Math.floor((17719*j)/50)+Math.floor(j/16)*Math.floor((15238*j)/43);
-  const d=l-29*Math.floor(l/29),mo=Math.floor((11*l+1)/325),y=30*n+j-30;
-  return`${d} ${months[mo-1]} ${y} AH`;
-};
+        // ── Stars ──
+        function Stars() {
+            const ref = useRef();
+            useEffect(() => {
+                const c = ref.current, ctx = c.getContext('2d');
+                let W = c.width = innerWidth, H = c.height = innerHeight;
+                const st = Array.from({ length: 200 }, () => ({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * 1.2 + .2, sp: Math.random() * .005 + .002, ph: Math.random() * Math.PI * 2 }));
+                let fr;
+                const draw = t => { ctx.clearRect(0, 0, W, H); st.forEach(s => { const a = .2 + .5 * Math.abs(Math.sin(t * s.sp + s.ph)); ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(255,248,220,${a})`; ctx.fill(); }); fr = requestAnimationFrame(draw); };
+                fr = requestAnimationFrame(draw);
+                const resize = () => { W = c.width = innerWidth; H = c.height = innerHeight; };
+                addEventListener('resize', resize);
+                return () => { cancelAnimationFrame(fr); removeEventListener('resize', resize); };
+            }, []);
+            return <canvas id="stars" ref={ref} />;
+        }
 
-// ── Stars ──
-function Stars(){
-  const ref=useRef();
-  useEffect(()=>{
-    const c=ref.current,ctx=c.getContext('2d');
-    let W=c.width=innerWidth,H=c.height=innerHeight;
-    const st=Array.from({length:200},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+.2,sp:Math.random()*.005+.002,ph:Math.random()*Math.PI*2}));
-    let fr;
-    const draw=t=>{ctx.clearRect(0,0,W,H);st.forEach(s=>{const a=.2+.5*Math.abs(Math.sin(t*s.sp+s.ph));ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(255,248,220,${a})`;ctx.fill();});fr=requestAnimationFrame(draw);};
-    fr=requestAnimationFrame(draw);
-    const resize=()=>{W=c.width=innerWidth;H=c.height=innerHeight;};
-    addEventListener('resize',resize);
-    return()=>{cancelAnimationFrame(fr);removeEventListener('resize',resize);};
-  },[]);
-  return <canvas id="stars" ref={ref}/>;
-}
-
-// ── Modal ──
-function Modal({onClose,title,subtitle,children}){
-  return(
-    <div style={{position:'fixed',inset:0,background:'rgba(2,9,18,.9)',zIndex:50,display:'flex',flexDirection:'column',justifyContent:'flex-end'}} onClick={onClose}>
-      <div style={{background:'#0A1628',border:'1px solid rgba(201,168,76,.18)',borderBottom:'none',borderRadius:'22px 22px 0 0',padding:'20px 18px 44px',maxHeight:'88vh',overflowY:'auto',position:'relative'}} onClick={e=>e.stopPropagation()}>
-        <div style={{width:36,height:4,background:'rgba(255,255,255,.1)',borderRadius:2,margin:'0 auto 18px'}}/>
-        <div style={{position:'absolute',top:18,right:18,width:30,height:30,borderRadius:'50%',background:'rgba(255,255,255,.06)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:13,color:'#3D5A70'}} onClick={onClose}>✕</div>
-        {title&&<div style={{fontFamily:"'Cinzel',serif",fontSize:16,letterSpacing:.5,marginBottom:3}}>{title}</div>}
-        {subtitle&&<div style={{fontSize:11,fontStyle:'italic',color:'#8AAABF',marginBottom:18,lineHeight:1.5}}>{subtitle}</div>}
-        {children}
-      </div>
-    </div>
-  );
-}
-
-// ── HOME ──
-function Home({times,cd,next,go}){
-  const [zi,setZi]=useState(0);const [zc,setZc]=useState(0);
-  const QZ=[{a:'لَا إِلٰهَ إِلَّا اللهُ',t:'Lā ilāha illallāh',n:200},{a:'أَسْتَغْفِرُ اللهَ',t:'Astaghfirullāh',n:100},{a:'يَا لَطِيْفُ يَا اللهُ',t:'Yā Laṭīfu Yā Allāh',n:33},{a:'حَسْبُنَا اللهُ وَنِعْمَ الْوَكِيْلُ',t:'Ḥasbunallāhu wa ni\'mal Wakīl',n:33}];
-  const cur=QZ[zi];
-  const tap=()=>{if(zc+1>=cur.n){setZi(i=>(i+1)%QZ.length);setZc(0);}else setZc(c=>c+1);};
-  const h=HADITH_LIST[new Date().getDate()%HADITH_LIST.length];
-  const G='var(--gold)',C='var(--card)',B='var(--br)';
-  return(
-    <div className="cnt scr">
-      <div className="bism">بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ</div>
-      <div className="hero">
-        <div style={{fontSize:9,letterSpacing:3,textTransform:'uppercase',color:G,opacity:.8,marginBottom:3}}>Next Salah</div>
-        <div style={{fontFamily:"'Cinzel',serif",fontSize:20,letterSpacing:1,marginBottom:1}}>{next?.label||'—'} {next?.jamaat?'Jamaat':'Awwal'}</div>
-        <div style={{fontFamily:"'Amiri',serif",fontSize:18,color:G,marginBottom:14}}>{next?.arabic||''}</div>
-        <div style={{fontFamily:"'Cinzel',serif",fontSize:40,color:'var(--gb)',letterSpacing:2,lineHeight:1,textShadow:'0 0 30px rgba(232,200,106,.2)'}}>{cd}</div>
-        <div style={{fontSize:9,color:'var(--td)',letterSpacing:2,marginTop:2}}>Hours · Minutes · Seconds</div>
-        {times.length>0
-          ?<div style={{display:'flex',gap:7,marginTop:16,overflowX:'auto',paddingBottom:2}}>
-            {times.map(s=><div key={s.label} style={{flexShrink:0,background:s.isNext?'rgba(201,168,76,.1)':'rgba(255,255,255,.04)',border:`1px solid ${s.isNext?'rgba(201,168,76,.4)':'rgba(201,168,76,.1)'}`,borderRadius:10,padding:'7px 11px',textAlign:'center',minWidth:55}}>
-              <div style={{fontSize:8,letterSpacing:1.5,textTransform:'uppercase',color:s.isNext?G:'var(--td)',marginBottom:2}}>{s.label}</div>
-              <div style={{fontFamily:"'Cinzel',serif",fontSize:11,color:s.isNext?'var(--tp)':'var(--ts)'}}>{s.time}</div>
-            </div>)}
-          </div>
-          :<div style={{fontSize:11,fontStyle:'italic',color:'var(--td)',marginTop:14}}>Fetching prayer times…</div>}
-      </div>
-
-      <div className="slbl">Today's Routine</div>
-      {[
-        {icon:'🌙',t:'Fajr Awwal Zikr',s:'21 recitations · 7 sections · ~30 min',dst:'routine',bg:'rgba(201,168,76,.08)',bc:'rgba(201,168,76,.2)'},
-        {icon:'🗓',t:'View Today\'s Plan',s:'Full day · Drag & drop · Salah anchored',dst:'plan',bg:'rgba(91,155,213,.08)',bc:'rgba(91,155,213,.2)'},
-        {icon:'📖',t:'Dalail Khayrat',s:'After Isha · Daily hizb',dst:'kitab',bg:'rgba(109,179,138,.08)',bc:'rgba(109,179,138,.2)'},
-      ].map(x=>(
-        <div key={x.t} style={{margin:'0 16px 8px',background:C,border:`1px solid ${B}`,borderRadius:16,padding:16,display:'flex',alignItems:'center',gap:14,cursor:'pointer'}} onClick={()=>go(x.dst)}>
-          <div style={{width:44,height:44,borderRadius:13,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0,background:x.bg,border:`1px solid ${x.bc}`}}>{x.icon}</div>
-          <div style={{flex:1}}><div style={{fontFamily:"'Cinzel',serif",fontSize:12,letterSpacing:.4,marginBottom:2}}>{x.t}</div><div style={{fontSize:11,fontStyle:'italic',color:'var(--ts)'}}>{x.s}</div></div>
-          <div style={{fontSize:9,padding:'3px 9px',borderRadius:20,border:`1px solid ${B}`,color:G,background:'rgba(201,168,76,.12)',whiteSpace:'nowrap'}}>Open →</div>
-        </div>
-      ))}
-
-      <div className="slbl">Quick Zikr</div>
-      <div style={{margin:'0 16px 8px',background:'linear-gradient(135deg,#0A1628,#061020)',border:`1px solid ${B}`,borderRadius:16,padding:18,cursor:'pointer'}} onClick={tap}>
-        <div style={{fontSize:9,letterSpacing:3,textTransform:'uppercase',color:G,opacity:.7,marginBottom:5}}>{zi+1} of {QZ.length} · Tap to count</div>
-        <div style={{fontFamily:"'Amiri',serif",fontSize:26,color:'var(--tp)',direction:'rtl',textAlign:'right',lineHeight:1.7,marginBottom:4}}>{cur.a}</div>
-        <div style={{fontStyle:'italic',fontSize:11,color:G,opacity:.8}}>{cur.t}</div>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:12,paddingTop:12,borderTop:'1px solid rgba(201,168,76,.1)'}}>
-          <div><div style={{fontFamily:"'Cinzel',serif",fontSize:32,color:'var(--gb)'}}>{zc}</div><div style={{fontSize:10,color:'var(--td)',fontStyle:'italic'}}>of {cur.n}</div></div>
-          <div style={{background:'rgba(201,168,76,.1)',border:'1px solid rgba(201,168,76,.3)',borderRadius:'50%',width:52,height:52,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,fontFamily:"'Amiri',serif",color:G}}>﴾</div>
-        </div>
-      </div>
-
-      <div className="slbl">Rawdah</div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,margin:'0 16px 8px'}}>
-        {[{icon:'📜',t:'Qasidas',s:'Burda · Qad Kafani',dst:'kitab',gc:'rgba(201,168,76,1)'},{icon:'🤲',t:'Masnoon Duas',s:'Every moment',dst:'kitab',gc:'rgba(109,179,138,1)'},{icon:'📿',t:'Dalail Khayrat',s:'Daily hizb',dst:'kitab',gc:'rgba(91,155,213,1)'},{icon:'🌙',t:'Tracker',s:'Streaks · Monthly',dst:'tracker',gc:'rgba(180,100,180,1)'}].map(x=>(
-          <div key={x.t} style={{background:C,border:`1px solid ${B}`,borderRadius:16,padding:16,cursor:'pointer',position:'relative',overflow:'hidden'}} onClick={()=>go(x.dst)}>
-            <div style={{position:'absolute',top:-20,right:-20,width:80,height:80,borderRadius:'50%',background:`radial-gradient(circle,${x.gc},transparent 70%)`,opacity:.12}}/>
-            <div style={{fontSize:24,marginBottom:8}}>{x.icon}</div>
-            <div style={{fontFamily:"'Cinzel',serif",fontSize:11,letterSpacing:.4,marginBottom:2}}>{x.t}</div>
-            <div style={{fontSize:10,fontStyle:'italic',color:'var(--td)',lineHeight:1.4}}>{x.s}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="slbl">Reflection</div>
-      <div style={{margin:'0 16px 16px',background:'rgba(10,22,40,.8)',border:'1px solid rgba(201,168,76,.1)',borderLeft:'3px solid var(--gold)',borderRadius:12,padding:'14px 16px'}}>
-        <div style={{fontStyle:'italic',fontSize:12,color:'var(--ts)',lineHeight:1.7,marginBottom:5}}>"{h.text}"</div>
-        <div style={{fontSize:9,letterSpacing:1.5,color:G,opacity:.6,textTransform:'uppercase'}}>{h.src}</div>
-      </div>
-    </div>
-  );
-}
-
-// ── Layout helpers ──
-const addDays=(d,n)=>{const r=new Date(d);r.setDate(r.getDate()+n);return r;};
-const fmtDay=d=>new Date(d).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
-
-const layoutBlocks=blocks=>{
-  if(!blocks.length)return[];
-  const sorted=[...blocks].sort((a,b)=>a.start-b.start);
-  const cols=[];
-  const res=sorted.map(b=>{
-    let c=cols.findIndex(e=>e<=b.start);
-    if(c===-1){c=cols.length;cols.push(0);}
-    cols[c]=b.start+b.dur;
-    return{...b,_col:c};
-  });
-  return res.map(b=>{
-    let mc=b._col;
-    res.forEach(o=>{
-      if(o.id!==b.id&&o.start<b.start+b.dur&&o.start+o.dur>b.start)mc=Math.max(mc,o._col);
-    });
-    return{...b,_tc:mc+1};
-  });
-};
-
-// ── PLANNER ──
-function Planner({salah,setSalah,go,jumpDate,setJumpDate}){
-  const [planDate,setPlanDate]=useState(()=>jumpDate||new Date());
-  const [planHijri,setPlanHijri]=useState('');
-  const [planSalah,setPlanSalah]=useState(salah);
-  const dk=`rawdah_blocks_${dateKey(planDate)}`;
-  const [blocks,setBlocks]=useState([]);
-  const [nowY,setNowY]=useState(mtp(nowM()));
-  const [drag,setDrag]=useState(null);
-  const [sel,setSel]=useState(null);
-  const [adding,setAdding]=useState(false);
-  const [jOpen,setJOpen]=useState(false);
-  const [toast,setToast]=useState('');
-  const [nb,setNb]=useState({cat:'ibadah',title:'',note:'',start:'08:00',dur:'60'});
-  const wrapRef=useRef();const gridRef=useRef();
-  const totalH=24*HOUR_H;
-
-  // Handle external jump (from tracker)
-  useEffect(()=>{
-    if(jumpDate){setPlanDate(jumpDate);setJumpDate(null);}
-  },[jumpDate]);
-
-  // Load blocks and fetch specific day's Salah times when date changes
-  useEffect(()=>{
-    // Load blocks
-    const stored=store.get(`rawdah_blocks_${dateKey(planDate)}`,null);
-    if(stored) {
-      setBlocks(stored);
-    } else if (isToday(planDate)) {
-      setBlocks(store.get('rawdah_tpl',null)||DEF_BLOCKS);
-    } else {
-      setBlocks([]);
-    }
-    
-    // Auto-scroll
-    setTimeout(()=>{
-      if(wrapRef.current)wrapRef.current.scrollTop=isToday(planDate)?Math.max(0,mtp(nowM())-180):mtp(4*60);
-    },100);
-
-    // Fetch Hijri and Salah times for THIS specific plan date
-    const dt = new Date(planDate);
-    const dStr = `${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}`;
-    fetch(`https://api.aladhan.com/v1/timings/${dStr}?latitude=-26.3189&longitude=27.8355&method=2`)
-      .then(r=>r.json()).then(d=>{
-        const H = d.data.date.hijri;
-        if(H) setPlanHijri(`${H.day} ${H.month.en} ${H.year} AH`);
-        const T = d.data.timings;
-        const map = {fajr_awal:'Fajr',shuruq:'Sunrise',zuhr_awal:'Dhuhr',asr_awal:'Asr',maghrib:'Maghrib',isha_awal:'Isha'};
-        setPlanSalah(salah.map(s => map[s.key] && T[map[s.key]] ? {...s, time: T[map[s.key]].slice(0,5)} : s));
-      }).catch(e => console.log(e));
-
-  },[dateKey(planDate), salah]);
-
-  useEffect(()=>{const iv=setInterval(()=>setNowY(mtp(nowM())),30000);return()=>clearInterval(iv);},[]);
-
-  const saveBlocks=bs=>{setBlocks(bs);store.set(`rawdah_blocks_${dateKey(planDate)}`,bs);};
-
-  const navDay=n=>{const d=addDays(planDate,n);setPlanDate(d);};
-
-  const onDS=(e,id)=>{
-    e.stopPropagation();
-    const cy=e.touches?e.touches[0].clientY:e.clientY;
-    const rect=gridRef.current.getBoundingClientRect();
-    const st=wrapRef.current.scrollTop;
-    const block=blocks.find(b=>b.id===id);
-    setDrag({id,offsetY:(cy-rect.top+st)-mtp(block.start)});
-  };
-  const onDM=e=>{
-    if(!drag)return;e.preventDefault();
-    const cy=e.touches?e.touches[0].clientY:e.clientY;
-    const rect=gridRef.current.getBoundingClientRect();
-    const st=wrapRef.current.scrollTop;
-    const snapped=Math.max(0,Math.min(1425,ptm((cy-rect.top+st)-drag.offsetY)));
-    setBlocks(prev=>prev.map(b=>b.id===drag.id?{...b,start:snapped}:b));
-  };
-  const onDE=()=>{if(drag){store.set(`rawdah_blocks_${dateKey(planDate)}`,blocks);}setDrag(null);};
-
-  const doAdd=()=>{
-    if(!nb.title.trim())return;
-    const newBlocks=[...blocks,{id:`b${Date.now()}`,cat:nb.cat,title:nb.title,note:nb.note,start:parseM(nb.start),dur:Math.max(15,parseInt(nb.dur)||60)}];
-    saveBlocks(newBlocks);setAdding(false);setNb({cat:'ibadah',title:'',note:'',start:'08:00',dur:'60'});
-  };
-
-  const saveTpl=()=>{store.set('rawdah_tpl',blocks);setToast('Template saved 🤍');setTimeout(()=>setToast(''),2500);};
-  const resetTpl=()=>{const tpl=store.get('rawdah_tpl',null)||DEF_BLOCKS;saveBlocks(tpl);setToast('Day reset to template');setTimeout(()=>setToast(''),2000);};
-
-  const handleBlockTap=b=>{
-    if(!drag){
-      if(b.link){go(b.link);}
-      else setSel(b);
-    }
-  };
-
-  const laidOut=layoutBlocks(blocks);
-
-  const G='var(--gold)',B='var(--br)';
-  return(
-    <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
-      <div style={{padding:'10px 14px 8px',borderBottom:`1px solid ${B}`,background:'rgba(2,9,18,.97)',flexShrink:0}}>
-        {/* Date nav row */}
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
-          <div style={{display:'flex',alignItems:'center',gap:10}}>
-            <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(255,255,255,.05)',border:`1px solid ${B}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:14,color:'var(--ts)'}} onClick={()=>navDay(-1)}>‹</div>
-            <div>
-              <div style={{fontFamily:"'Cinzel',serif",fontSize:13,letterSpacing:.5,color:isToday(planDate)?G:'var(--tp)'}}>
-                {isToday(planDate)?'Today':fmtDay(planDate)}
-              </div>
-              <div style={{fontSize:9,color:'var(--td)',letterSpacing:.5}}>{new Date(planDate).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})} {planHijri && ` · ${planHijri}`}</div>
-            </div>
-            <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(255,255,255,.05)',border:`1px solid ${B}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:14,color:'var(--ts)'}} onClick={()=>navDay(1)}>›</div>
-            {!isToday(planDate)&&<div style={{fontSize:9,padding:'3px 8px',borderRadius:8,background:'rgba(201,168,76,.12)',border:`1px solid ${B}`,color:G,cursor:'pointer'}} onClick={()=>setPlanDate(new Date())}>Today</div>}
-          </div>
-          <div style={{display:'flex',gap:5}}>
-            <div style={{background:'rgba(91,155,213,.1)',border:'1px solid rgba(91,155,213,.3)',borderRadius:9,padding:'4px 9px',fontSize:8,color:'#5B9BD5',cursor:'pointer',letterSpacing:1.5,textTransform:'uppercase'}} onClick={()=>setJOpen(true)}>Jamaat</div>
-            <div style={{background:'rgba(201,168,76,.12)',border:`1px solid ${B}`,borderRadius:9,padding:'4px 9px',fontSize:8,color:G,cursor:'pointer',letterSpacing:1.5,textTransform:'uppercase'}} onClick={saveTpl}>Save ♡</div>
-            <div style={{background:'rgba(255,255,255,.04)',border:`1px solid ${B}`,borderRadius:9,padding:'4px 9px',fontSize:8,color:'var(--td)',cursor:'pointer',letterSpacing:1.5,textTransform:'uppercase'}} onClick={resetTpl}>Reset</div>
-          </div>
-        </div>
-        {/* Salah strip */}
-        <div style={{display:'flex',gap:5,overflowX:'auto',paddingBottom:2}}>
-          {planSalah.map(s=>(
-            <div key={s.key} style={{flexShrink:0,border:`1px solid ${s.jamaat?'rgba(91,155,213,.3)':'rgba(201,168,76,.15)'}`,borderRadius:8,padding:'4px 8px',textAlign:'center',minWidth:44,background:s.jamaat?'rgba(91,155,213,.06)':'rgba(255,255,255,.03)'}}>
-              <div style={{fontFamily:"'Amiri',serif",fontSize:s.jamaat?8:11,color:s.jamaat?'#5B9BD5':G,lineHeight:1,marginBottom:1,letterSpacing:s.jamaat?1:0,textTransform:s.jamaat?'uppercase':'none'}}>{s.jamaat?'J':(s.arabic||s.label.charAt(0))}</div>
-              <div style={{fontFamily:"'Cinzel',serif",fontSize:9,color:'var(--tp)'}}>{s.time}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div ref={wrapRef} style={{flex:1,overflowY:'scroll',overflowX:'hidden',position:'relative',touchAction:drag?'none':'pan-y', paddingBottom: '120px'}}
-        onMouseMove={onDM} onTouchMove={onDM} onMouseUp={onDE} onTouchEnd={onDE} onMouseLeave={onDE}>
-        <div style={{position:'relative',display:'flex',height:totalH}}>
-          <div style={{width:48,flexShrink:0,position:'relative',height:totalH}}>
-            {Array.from({length:25},(_,i)=><div key={i} style={{position:'absolute',right:7,top:i*HOUR_H,fontFamily:"'Cinzel',serif",fontSize:8,color:'var(--td)',letterSpacing:.5,transform:'translateY(-50%)',whiteSpace:'nowrap'}}>{i<24?`${String(i).padStart(2,'0')}:00`:''}</div>)}
-          </div>
-          <div ref={gridRef} style={{flex:1,position:'relative',borderLeft:'1px solid rgba(201,168,76,.1)',height:totalH}}>
-            {Array.from({length:24*4},(_,i)=><div key={i} style={{position:'absolute',left:0,right:0,top:i*SLOT_H,borderTop:i%4===0?'1px solid rgba(201,168,76,.1)':i%2===0?'1px dashed rgba(255,255,255,.04)':'1px solid rgba(255,255,255,.025)',pointerEvents:'none'}}/>)}
-            
-            {planSalah.map(s=>{
-              const top=mtp(parseM(s.time)),type=s.jamaat?'jm':'aw';
-              return<div key={s.key} style={{position:'absolute',left:0,right:0,top,zIndex:5,pointerEvents:'none'}}>
-                <div style={{height:1,background:s.jamaat?'linear-gradient(90deg,#5B9BD5,rgba(91,155,213,.15))':'linear-gradient(90deg,var(--gold),rgba(201,168,76,.15))'}}/>
-                <div style={{display:'inline-flex',alignItems:'center',gap:4,marginTop:2,padding:'2px 8px 2px 4px',borderRadius:'0 6px 6px 0',background:s.jamaat?'rgba(91,155,213,.09)':'rgba(201,168,76,.09)'}}>
-                  {s.arabic&&<span style={{fontFamily:"'Amiri',serif",fontSize:13,lineHeight:1,color:s.jamaat?'#5B9BD5':G}}>{s.arabic}</span>}
-                  <span style={{fontSize:8,letterSpacing:1.5,textTransform:'uppercase',color:s.jamaat?'#5B9BD5':G}}>{s.label}</span>
-                  <span style={{fontSize:8,color:'var(--td)',fontFamily:"'Cinzel',serif"}}>{s.time}</span>
+        // ── Modal ──
+        function Modal({ onClose, title, subtitle, children }) {
+            return (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,9,18,.9)', zIndex: 50, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }} onClick={onClose}>
+                    <div style={{ background: '#0A1628', border: '1px solid rgba(201,168,76,.18)', borderBottom: 'none', borderRadius: '22px 22px 0 0', padding: '20px 18px 44px', maxHeight: '88vh', overflowY: 'auto', position: 'relative' }} onClick={e => e.stopPropagation()}>
+                        <div style={{ width: 36, height: 4, background: 'rgba(255,255,255,.1)', borderRadius: 2, margin: '0 auto 18px' }} />
+                        <div style={{ position: 'absolute', top: 18, right: 18, width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 13, color: '#3D5A70' }} onClick={onClose}>✕</div>
+                        {title && <div style={{ fontFamily: "'Cinzel',serif", fontSize: 16, letterSpacing: .5, marginBottom: 3 }}>{title}</div>}
+                        {subtitle && <div style={{ fontSize: 11, fontStyle: 'italic', color: '#8AAABF', marginBottom: 18, lineHeight: 1.5 }}>{subtitle}</div>}
+                        {children}
+                    </div>
                 </div>
-              </div>;
-            })}
-            
-            {isToday(planDate) && <div style={{position:'absolute',left:0,right:0,top:nowY,zIndex:7,pointerEvents:'none'}}>
-              <div style={{position:'absolute',left:-3,width:7,height:7,borderRadius:'50%',background:'#E84040',transform:'translateY(-3px)'}}/>
-              <div style={{position:'absolute',left:4,right:0,height:1,background:'rgba(232,64,64,.5)'}}/>
-            </div>}
+            );
+        }
 
-            {laidOut.map(b=>{
-              const cat=CATS[b.cat]||CATS.custom;
-              const top=mtp(b.start),height=Math.max(SLOT_H,mtp(b.dur));
-              const isDrag=drag?.id===b.id,small=height<36;
-              const hasLink=!!b.link;
-              const colW=100/b._tc;
-              const colL=b._col*colW;
-              const zIdx = isDrag ? 20 : (b._col + 4);
+        // ── HOME ──
+        function Home({ times, cd, next, go }) {
+            const [zi, setZi] = useState(0); const [zc, setZc] = useState(0);
+            const QZ = [{ a: 'لَا إِلٰهَ إِلَّا اللهُ', t: 'Lā ilāha illallāh', n: 200 }, { a: 'أَسْتَغْفِرُ اللهَ', t: 'Astaghfirullāh', n: 100 }, { a: 'يَا لَطِيْفُ يَا اللهُ', t: 'Yā Laṭīfu Yā Allāh', n: 33 }, { a: 'حَسْبُنَا اللهُ وَنِعْمَ الْوَكِيْلُ', t: 'Ḥasbunallāhu wa ni\’mal Wakīl', n: 33 }];
+            const cur = QZ[zi];
+            const tap = () => { if (zc + 1 >= cur.n) { setZi(i => (i + 1) % QZ.length); setZc(0); } else setZc(c => c + 1); };
+            const h = HADITH_LIST[new Date().getDate() % HADITH_LIST.length];
+            const G = 'var(--gold)', C = 'var(--card)', B = 'var(--br)';
+            return (
+                <div className="cnt scr">
+                    <div className="bism">بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ</div>
+                    <div className="hero">
+                        <div style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: G, opacity: .8, marginBottom: 3 }}>Next Salah</div>
+                        <div style={{ fontFamily: "'Cinzel',serif", fontSize: 20, letterSpacing: 1, marginBottom: 1 }}>{next?.label || '—'} {next?.jamaat ? 'Jamaat' : 'Awwal'}</div>
+                        <div style={{ fontFamily: "'Amiri',serif", fontSize: 18, color: G, marginBottom: 14 }}>{next?.arabic || ''}</div>
+                        <div style={{ fontFamily: "'Cinzel',serif", fontSize: 40, color: 'var(--gb)', letterSpacing: 2, lineHeight: 1, textShadow: '0 0 30px rgba(232,200,106,.2)' }}>{cd}</div>
+                        <div style={{ fontSize: 9, color: 'var(--td)', letterSpacing: 2, marginTop: 2 }}>Hours · Minutes · Seconds</div>
+                        {times.length > 0
+                            ? <div style={{ display: 'flex', gap: 7, marginTop: 16, overflowX: 'auto', paddingBottom: 2 }}>
+                                {times.map(s => <div key={s.label} style={{ flexShrink: 0, background: s.isNext ? 'rgba(201,168,76,.1)' : 'rgba(255,255,255,.04)', border: `1px solid ${s.isNext ? 'rgba(201,168,76,.4)' : 'rgba(201,168,76,.1)'}`, borderRadius: 10, padding: '7px 11px', textAlign: 'center', minWidth: 55 }}>
+                                    <div style={{ fontSize: 8, letterSpacing: 1.5, textTransform: 'uppercase', color: s.isNext ? G : 'var(--td)', marginBottom: 2 }}>{s.label}</div>
+                                    <div style={{ fontFamily: "'Cinzel',serif", fontSize: 11, color: s.isNext ? 'var(--tp)' : 'var(--ts)' }}>{s.time}</div>
+                                </div>)}
+                            </div>
+                            : <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--td)', marginTop: 14 }}>Fetching prayer times…</div>}
+                    </div>
+                    <div className="slbl">Today's Routine</div>
+                    {[
+                        { icon: '🌙', t: 'Fajr Awwal Zikr', s: '21 recitations · 7 sections · ~30 min', dst: 'routine', bg: 'rgba(201,168,76,.08)', bc: 'rgba(201,168,76,.2)' },
+                        { icon: '🗓', t: 'View Today\’s Plan', s: 'Full day · Drag & drop · Salah anchored', dst: 'plan', bg: 'rgba(91,155,213,.08)', bc: 'rgba(91,155,213,.2)' },
+                        { icon: '📖', t: 'Dalail Khayrat', s: 'After Isha · Daily hizb', dst: 'kitab', bg: 'rgba(109,179,138,.08)', bc: 'rgba(109,179,138,.2)' },
+                    ].map(x => (
+                        <div key={x.t} style={{ margin: '0 16px 8px', background: C, border: `1px solid ${B}`, borderRadius: 16, padding: 16, display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }} onClick={() => go(x.dst)}>
+                            <div style={{ width: 44, height: 44, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, background: x.bg, border: `1px solid ${x.bc}` }}>{x.icon}</div>
+                            <div style={{ flex: 1 }}><div style={{ fontFamily: "'Cinzel',serif", fontSize: 12, letterSpacing: .4, marginBottom: 2 }}>{x.t}</div><div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--ts)' }}>{x.s}</div></div>
+                            <div style={{ fontSize: 9, padding: '3px 9px', borderRadius: 20, border: `1px solid ${B}`, color: G, background: 'rgba(201,168,76,.12)', whiteSpace: 'nowrap' }}>Open →</div>
+                        </div>
+                    ))}
 
-              return<div key={b.id} style={{
-                position:'absolute',
-                left:`calc(${colL}% + ${b._col * 4}px)`,
-                width:`calc(${colW}% - 2px)`,
-                top,height,
-                background:cat.bg,
-                border:`2px solid #0A1628`,
-                borderRadius:10,display:'flex',overflow:'hidden',
-                cursor:'pointer',
-                zIndex: zIdx,
-                boxShadow: isDrag ? '0 10px 40px rgba(0,0,0,.7), inset 0 0 0 1px ' + cat.border : b._tc > 1 ? '-2px 2px 8px rgba(0,0,0,.3), inset 0 0 0 1px ' + cat.border : 'inset 0 0 0 1px ' + cat.border,
-                opacity:isDrag?0.92:1
-              }} onClick={()=>handleBlockTap(b)}>
-                <div style={{width:16,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',cursor:'grab',fontSize:9,color:'rgba(255,255,255,.2)',touchAction:'none'}}
-                  onMouseDown={e=>onDS(e,b.id)} onTouchStart={e=>onDS(e,b.id)} onClick={e=>e.stopPropagation()}>⠿</div>
-                <div style={{flex:1,padding:'4px 4px 4px 0',minWidth:0,display:'flex',flexDirection:'column',justifyContent:'center',overflow:'hidden'}}>
-                  <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:.2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',color:cat.color}}>{b.title}{hasLink?' →':''}</div>
-                  {!small&&<div style={{fontSize:7,opacity:.55,letterSpacing:.3,marginTop:1,whiteSpace:'nowrap'}}>{fmtT(b.start)}–{fmtT(b.start+b.dur)}</div>}
+                    <div className="slbl">Quick Zikr</div>
+                    <div style={{ margin: '0 16px 8px', background: 'linear-gradient(135deg,#0A1628,#061020)', border: `1px solid ${B}`, borderRadius: 16, padding: 18, cursor: 'pointer' }} onClick={tap}>
+                        <div style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: G, opacity: .7, marginBottom: 5 }}>{zi + 1} of {QZ.length} · Tap to count</div>
+                        <div style={{ fontFamily: "'Amiri',serif", fontSize: 26, color: 'var(--tp)', direction: 'rtl', textAlign: 'right', lineHeight: 1.7, marginBottom: 4 }}>{cur.a}</div>
+                        <div style={{ fontStyle: 'italic', fontSize: 11, color: G, opacity: .8 }}>{cur.t}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(201,168,76,.1)' }}>
+                            <div><div style={{ fontFamily: "'Cinzel',serif", fontSize: 32, color: 'var(--gb)' }}>{zc}</div><div style={{ fontSize: 10, color: 'var(--td)', fontStyle: 'italic' }}>of {cur.n}</div></div>
+                            <div style={{ background: 'rgba(201,168,76,.1)', border: '1px solid rgba(201,168,76,.3)', borderRadius: '50%', width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontFamily: "'Amiri',serif", color: G }}>﴾</div>
+                        </div>
+                    </div>
+
+                    <div className="slbl">Rawdah</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, margin: '0 16px 8px' }}>
+                        {[{ icon: '📜', t: 'Qasidas', s: 'Burda · Qad Kafani', dst: 'kitab', gc: 'rgba(201,168,76,1)' }, { icon: '🤲', t: 'Masnoon Duas', s: 'Every moment', dst: 'kitab', gc: 'rgba(109,179,138,1)' }, { icon: '📿', t: 'Dalail Khayrat', s: 'Daily hizb', dst: 'kitab', gc: 'rgba(91,155,213,1)' }, { icon: '🌙', t: 'Tracker', s: 'Streaks · Monthly', dst: 'tracker', gc: 'rgba(180,100,180,1)' }].map(x => (
+                            <div key={x.t} style={{ background: C, border: `1px solid ${B}`, borderRadius: 16, padding: 16, cursor: 'pointer', position: 'relative', overflow: 'hidden' }} onClick={() => go(x.dst)}>
+                                <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: `radial-gradient(circle,${x.gc},transparent 70%)`, opacity: .12 }} />
+                                <div style={{ fontSize: 24, marginBottom: 8 }}>{x.icon}</div>
+                                <div style={{ fontFamily: "'Cinzel',serif", fontSize: 11, letterSpacing: .4, marginBottom: 2 }}>{x.t}</div>
+                                <div style={{ fontSize: 10, fontStyle: 'italic', color: 'var(--td)', lineHeight: 1.4 }}>{x.s}</div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="slbl">Reflection</div>
+                    <div style={{ margin: '0 16px 16px', background: 'rgba(10,22,40,.8)', border: '1px solid rgba(201,168,76,.1)', borderLeft: '3px solid var(--gold)', borderRadius: 12, padding: '14px 16px' }}>
+                        <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--ts)', lineHeight: 1.7, marginBottom: 5 }}>"{h.text}"</div>
+                        <div style={{ fontSize: 9, letterSpacing: 1.5, color: G, opacity: .6, textTransform: 'uppercase' }}>{h.src}</div>
+                    </div>
                 </div>
-                {!small&&b._tc===1&&<div style={{padding:'4px 4px 0 0',fontSize:11,flexShrink:0}}>{cat.icon}</div>}
-              </div>;
-            })}
-          </div>
-        </div>
-      </div>
+            );
+        }
 
-      <div style={{position:'absolute',bottom:86,right:16,width:50,height:50,borderRadius:'50%',background:G,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',zIndex:15,boxShadow:'0 4px 20px rgba(201,168,76,.4)',fontSize:26,color:'#020912',fontWeight:700}} onClick={()=>setAdding(true)}>+</div>
-      {toast&&<div style={{position:'fixed',bottom:110,left:'50%',transform:'translateX(-50%)',background:'rgba(109,179,138,.2)',border:'1px solid var(--gr)',borderRadius:12,padding:'10px 20px',fontSize:12,color:'var(--gr)',zIndex:60,pointerEvents:'none'}}>{toast}</div>}
+        // ── Layout helpers ──
+        const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
+        const fmtDay = d => new Date(d).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 
-      {sel&&<Modal onClose={()=>setSel(null)} title={sel.title} subtitle={`${fmtT(sel.start)} – ${fmtT(sel.start+sel.dur)} · ${sel.dur} min · ${CATS[sel.cat]?.label}`}>
-        {sel.note&&<div style={{marginBottom:16}}><div style={{fontSize:9,letterSpacing:2,textTransform:'uppercase',color:G,opacity:.7,marginBottom:8}}>About this block</div><div style={{fontSize:13,color:'var(--ts)',lineHeight:1.8}}>{sel.note}</div></div>}
-        <div style={{marginBottom:16}}>
-          <div style={{fontSize:9,letterSpacing:2,textTransform:'uppercase',color:G,opacity:.7,marginBottom:8}}>Reschedule</div>
-          <div style={{display:'flex',gap:8}}>
-            <input style={{flex:1,background:'rgba(255,255,255,.05)',border:`1px solid ${B}`,borderRadius:10,padding:'11px 13px',color:'var(--tp)',fontSize:13,fontFamily:"'EB Garamond',serif",outline:'none'}} type="time" defaultValue={fmtT(sel.start)} onChange={e=>setBlocks(prev=>prev.map(b=>b.id===sel.id?{...b,start:parseM(e.target.value)}:b))}/>
-            <input style={{flex:1,background:'rgba(255,255,255,.05)',border:`1px solid ${B}`,borderRadius:10,padding:'11px 13px',color:'var(--tp)',fontSize:13,fontFamily:"'EB Garamond',serif",outline:'none'}} placeholder="Duration (min)" defaultValue={sel.dur} onChange={e=>setBlocks(prev=>prev.map(b=>b.id===sel.id?{...b,dur:Math.max(15,parseInt(e.target.value)||15)}:b))}/>
-          </div>
-        </div>
-        <div style={{width:'100%',padding:13,background:'rgba(220,80,80,.12)',border:'1px solid rgba(220,80,80,.2)',borderRadius:13,fontFamily:"'Cinzel',serif",fontSize:12,letterSpacing:1,color:'rgba(220,80,80,.8)',cursor:'pointer',textAlign:'center',marginTop:8}} onClick={()=>{saveBlocks(blocks.filter(b=>b.id!==sel.id));setSel(null);}}>Remove Block</div>
-      </Modal>}
+        const layoutBlocks = blocks => {
+            if (!blocks.length) return [];
+            const sorted = [...blocks].sort((a, b) => a.start - b.start);
+            const cols = [];
+            const res = sorted.map(b => {
+                let c = cols.findIndex(e => e <= b.start);
+                if (c === -1) { c = cols.length; cols.push(0); }
+                cols[c] = b.start + b.dur;
+                return { ...b, _col: c };
+            });
+            return res.map(b => {
+                let mc = b._col;
+                res.forEach(o => {
+                    if (o.id !== b.id && o.start < b.start + b.dur && o.start + o.dur > b.start) mc = Math.max(mc, o._col);
+                });
+                return { ...b, _tc: mc + 1 };
+            });
+        };
 
-      {adding&&<Modal onClose={()=>setAdding(false)} title="New Block" subtitle="Add anything to your day">
-        <div style={{marginBottom:16}}>
-          <div style={{fontSize:9,letterSpacing:2,textTransform:'uppercase',color:G,opacity:.7,marginBottom:8}}>Category</div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:7}}>
-            {Object.entries(CATS).map(([k,v])=><div key={k} style={{border:`1px solid ${nb.cat===k?G:B}`,borderRadius:11,padding:'9px 6px',textAlign:'center',cursor:'pointer',background:nb.cat===k?'rgba(201,168,76,.12)':'rgba(255,255,255,.03)'}} onClick={()=>setNb(p=>({...p,cat:k}))}>
-              <div style={{fontSize:18,marginBottom:3}}>{v.icon}</div>
-              <div style={{fontSize:8,letterSpacing:1,textTransform:'uppercase',color:nb.cat===k?G:'var(--td)'}}>{v.label}</div>
-            </div>)}
-          </div>
-        </div>
-        {[['Title','text','e.g. Client meeting, Gym...','title'],['Note (optional)','text','Details, reminders...','note']].map(([lbl,type,ph,key])=>(
-          <div key={key} style={{marginBottom:12}}>
-            <div style={{fontSize:9,letterSpacing:2,textTransform:'uppercase',color:G,opacity:.7,marginBottom:6}}>{lbl}</div>
-            <input style={{width:'100%',background:'rgba(255,255,255,.05)',border:`1px solid ${B}`,borderRadius:10,padding:'11px 13px',color:'var(--tp)',fontSize:13,fontFamily:"'EB Garamond',serif",outline:'none'}} type={type} placeholder={ph} value={nb[key]} onChange={e=>setNb(p=>({...p,[key]:e.target.value}))}/>
-          </div>
-        ))}
-        <div style={{marginBottom:12}}>
-          <div style={{fontSize:9,letterSpacing:2,textTransform:'uppercase',color:G,opacity:.7,marginBottom:6}}>Start Time & Duration (min)</div>
-          <div style={{display:'flex',gap:8}}>
-            <input style={{flex:1,background:'rgba(255,255,255,.05)',border:`1px solid ${B}`,borderRadius:10,padding:'11px 13px',color:'var(--tp)',fontSize:13,outline:'none'}} type="time" value={nb.start} onChange={e=>setNb(p=>({...p,start:e.target.value}))}/>
-            <input style={{flex:1,background:'rgba(255,255,255,.05)',border:`1px solid ${B}`,borderRadius:10,padding:'11px 13px',color:'var(--tp)',fontSize:13,fontFamily:"'EB Garamond',serif",outline:'none'}} placeholder="Minutes" value={nb.dur} onChange={e=>setNb(p=>({...p,dur:e.target.value}))}/>
-          </div>
-        </div>
-        <div style={{width:'100%',padding:13,background:G,border:'none',borderRadius:13,fontFamily:"'Cinzel',serif",fontSize:12,letterSpacing:1,color:'#020912',cursor:'pointer',textAlign:'center',fontWeight:600}} onClick={doAdd}>Add to Day</div>
-      </Modal>}
+        // ── PLANNER ──
+        function Planner({ salah, setSalah, go, jumpDate, setJumpDate }) {
+            const [planDate, setPlanDate] = useState(() => jumpDate || new Date());
+            const [planHijri, setPlanHijri] = useState('');
+            const [planSalah, setPlanSalah] = useState(salah);
+            const dk = `rawdah_blocks_${dateKey(planDate)}`;
+            const [blocks, setBlocks] = useState([]);
+            const [nowY, setNowY] = useState(mtp(nowM()));
+            const [drag, setDrag] = useState(null);
+            const [sel, setSel] = useState(null);
+            const [adding, setAdding] = useState(false);
+            const [jOpen, setJOpen] = useState(false);
+            const [toast, setToast] = useState('');
+            const [nb, setNb] = useState({ cat: 'ibadah', title: '', note: '', start: '08:00', dur: '60' });
+            const wrapRef = useRef(); const gridRef = useRef();
+            const totalH = 24 * HOUR_H;
 
-      {jOpen&&<Modal onClose={()=>setJOpen(false)} title="Masjid Himayatul Islam" subtitle="Lenasia Ext. 1 · Lark Street · Update when the board changes">
-        {salah.filter(s=>s.jamaat).map(s=>(
-          <div key={s.key} style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
-            <div style={{fontSize:12,color:'var(--ts)',width:90,flexShrink:0}}>{s.label.replace(' Jamaat','')}</div>
-            <input style={{flex:1,background:'rgba(255,255,255,.05)',border:'1px solid rgba(91,155,213,.3)',borderRadius:8,padding:'8px 12px',color:'var(--tp)',fontSize:13,fontFamily:"'Cinzel',serif",outline:'none'}} type="time" value={s.time} onChange={e=>setSalah(prev=>{const u=prev.map(p=>p.key===s.key?{...p,time:e.target.value}:p);store.set('rawdah_jamaat',u);return u;})}/>
-          </div>
-        ))}
-        <div style={{width:'100%',padding:13,background:G,border:'none',borderRadius:13,fontFamily:"'Cinzel',serif",fontSize:12,letterSpacing:1,color:'#020912',cursor:'pointer',textAlign:'center',fontWeight:600,marginTop:16}} onClick={()=>setJOpen(false)}>Save Jamaat Times</div>
-        <div style={{fontSize:10,color:'var(--td)',textAlign:'center',marginTop:12,fontStyle:'italic',lineHeight:1.5}}>Awal times auto-fetched from Muwaqqit API · Lenasia coordinates</div>
-      </Modal>}
-    </div>
-  );
-}
+            // Handle external jump (from tracker)
+            useEffect(() => {
+                if (jumpDate) { setPlanDate(jumpDate); setJumpDate(null); }
+            }, [jumpDate]);
 
-// ── ROUTINE ──
-function Routine(){
-  const dk=`rawdah_routine_${todayKey()}`;
-  const [ck,setCk]=useState(()=>store.get(dk,{}));
-  const [on,setOn]=useState({});
-  const toggle=id=>{const n={...ck,[id]:!ck[id]};setCk(n);store.set(dk,n);};
-  const note=id=>setOn(p=>({...p,[id]:!p[id]}));
-  const done=Object.values(ck).filter(Boolean).length;
-  const pct=(done/ROUTINE.length)*100;
-  let ls=null;
-  return(
-    <div className="cnt scr">
-      <div style={{padding:'16px 18px 14px'}}>
-        <div style={{fontSize:9,letterSpacing:3,textTransform:'uppercase',color:'var(--gold)',opacity:.7,marginBottom:3}}>Fajr Awwal Routine</div>
-        <div style={{fontFamily:"'Cinzel',serif",fontSize:18,marginBottom:10}}>The Zikrs</div>
-        <div style={{height:4,background:'rgba(255,255,255,.06)',borderRadius:4,overflow:'hidden'}}><div style={{height:'100%',background:'linear-gradient(90deg,var(--gold),var(--gb))',borderRadius:4,width:`${pct}%`,transition:'width .4s'}}/></div>
-        <div style={{display:'flex',justifyContent:'space-between',marginTop:6,fontSize:10,color:'var(--td)'}}><span>{done} of {ROUTINE.length} completed</span><span>{done===ROUTINE.length?'🤍 May Allah accept':`${ROUTINE.length-done} remaining`}</span></div>
-      </div>
-      {ROUTINE.map(item=>{
-        const ns=item.section!==ls;if(ns)ls=item.section;
-        return<div key={item.id}>
-          {ns&&<div style={{margin:'18px 16px 10px',display:'flex',alignItems:'center',gap:10}}>
-            <div style={{flex:1,height:1,background:'var(--br)'}}/>
-            <div style={{fontSize:9,letterSpacing:2,textTransform:'uppercase',color:'var(--gold)',opacity:.7,whiteSpace:'nowrap'}}>{item.sectionTitle}</div>
-            {item.sectionTime&&<div style={{fontSize:9,color:'var(--td)',fontStyle:'italic',whiteSpace:'nowrap'}}>{item.sectionTime}</div>}
-            <div style={{flex:1,height:1,background:'var(--br)'}}/>
-          </div>}
-          <div style={{margin:'0 16px 8px',background:'var(--card)',border:`1px solid ${ck[item.id]?'rgba(109,179,138,.25)':'var(--br)'}`,borderRadius:14,padding:'16px 14px',opacity:ck[item.id]?.55:1,transition:'all .2s'}}>
-            <div style={{display:'flex',alignItems:'flex-start',gap:10}}>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:8,letterSpacing:2,textTransform:'uppercase',color:'var(--gold)',opacity:.7,marginBottom:4}}>{item.type}</div>
-                <div style={{fontFamily:"'Amiri',serif",fontSize:20,lineHeight:2,direction:'rtl',textAlign:'right',color:'var(--tp)',marginBottom:8,whiteSpace:'pre-line'}}>{item.arabic}</div>
-                <div style={{fontStyle:'italic',fontSize:10.5,color:'var(--gold)',opacity:.85,lineHeight:1.6,marginBottom:4,whiteSpace:'pre-line'}}>{item.translit}</div>
-                <div style={{fontSize:10.5,color:'var(--ts)',lineHeight:1.6,whiteSpace:'pre-line'}}>{item.translation}</div>
-                {item.note&&<div>
-                  <div style={{marginTop:8,fontSize:9,color:'var(--td)',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:4}} onClick={()=>note(item.id)}>
-                    <span style={{fontSize:8}}>{on[item.id]?'▼':'▶'}</span>{on[item.id]?'hide note':'show note'}
-                  </div>
-                  {on[item.id]&&<div style={{fontSize:9.5,fontStyle:'italic',color:'var(--td)',background:'rgba(201,168,76,.04)',borderLeft:'2px solid rgba(201,168,76,.25)',padding:'6px 10px',marginTop:8,borderRadius:'0 6px 6px 0',lineHeight:1.6}}>{item.note}</div>}
-                </div>}
-              </div>
-              <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,flexShrink:0}}>
-                <div style={{background:'rgba(201,168,76,.12)',border:'1px solid rgba(201,168,76,.35)',color:'var(--gold)',fontSize:11,fontWeight:700,padding:'3px 10px',borderRadius:20,whiteSpace:'nowrap'}}>{item.count}</div>
-                <div style={{width:30,height:30,borderRadius:'50%',border:`2px solid ${ck[item.id]?'var(--gr)':'rgba(255,255,255,.15)'}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,cursor:'pointer',background:ck[item.id]?'var(--gr)':'transparent',color:ck[item.id]?'#0A1628':'transparent',transition:'all .2s'}} onClick={()=>toggle(item.id)}>{ck[item.id]?'✓':''}</div>
-              </div>
-            </div>
-          </div>
-        </div>;
-      })}
-      <div style={{textAlign:'center',padding:'24px 20px',borderTop:'1px solid rgba(255,255,255,.05)'}}>
-        <div style={{fontFamily:"'Amiri',serif",fontSize:22,color:'var(--gold)',direction:'rtl',marginBottom:8}}>رَبَّنَا تَقَبَّلْ مِنَّا</div>
-        <div style={{fontSize:11,fontStyle:'italic',color:'var(--td)'}}>Rabbanā taqabbal minnā — Our Lord, accept from us</div>
-      </div>
-    </div>
-  );
-}
+            // Load blocks and fetch specific day's Salah times when date changes
+            useEffect(() => {
+                // Load blocks
+                const stored = store.get(`rawdah_blocks_${dateKey(planDate)}`, null);
+                if (stored) {
+                    setBlocks(stored);
+                } else if (isToday(planDate)) {
+                    setBlocks(store.get('rawdah_tpl', null) || DEF_BLOCKS);
+                } else {
+                    setBlocks([]);
+                }
 
-// ── ZIKR ──
-function Zikr(){
-  const [idx,setIdx]=useState(0);const [cnt,setCnt]=useState(0);
-  const cur=ZIKR_LIST[idx];const done=cnt>=cur.n;const pct=Math.min(cnt/cur.n,1);
-  const R=56,C=2*Math.PI*R;
-  return(
-    <div className="cnt scr">
-      <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',flex:1,padding:20,textAlign:'center'}}>
-        <div style={{fontSize:9,letterSpacing:3,textTransform:'uppercase',color:'var(--gold)',opacity:.7,marginBottom:16}}>{idx+1} of {ZIKR_LIST.length} · tap to count</div>
-        <div style={{fontFamily:"'Amiri',serif",fontSize:34,color:'var(--tp)',direction:'rtl',lineHeight:1.8,marginBottom:8}}>{cur.a}</div>
-        <div style={{fontStyle:'italic',fontSize:13,color:'var(--gold)',opacity:.85,marginBottom:4}}>{cur.t}</div>
-        <div style={{fontSize:12,color:'var(--ts)',marginBottom:36,fontStyle:'italic'}}>{cur.tr}</div>
-        <div style={{position:'relative',width:130,height:130,margin:'0 auto 24px'}}>
-          <svg width="130" height="130" style={{position:'absolute',inset:0,transform:'rotate(-90deg)'}}>
-            <circle cx="65" cy="65" r={R} fill="none" stroke="rgba(201,168,76,.1)" strokeWidth="4"/>
-            <circle cx="65" cy="65" r={R} fill="none" stroke={done?'var(--gr)':'var(--gold)'} strokeWidth="4" strokeDasharray={C} strokeDashoffset={C*(1-pct)} strokeLinecap="round" style={{transition:'stroke-dashoffset .15s ease,stroke .3s'}}/>
-          </svg>
-          <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
-            <div style={{fontFamily:"'Cinzel',serif",fontSize:42,color:'var(--gb)',lineHeight:1}}>{cnt}</div>
-            <div style={{fontSize:11,color:'var(--td)'}}>of {cur.n}</div>
-          </div>
-        </div>
-        <div style={{width:100,height:100,borderRadius:'50%',background:done?'rgba(109,179,138,.1)':'rgba(201,168,76,.08)',border:`2px solid ${done?'rgba(109,179,138,.5)':'rgba(201,168,76,.3)'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',margin:'0 auto 28px',position:'relative'}} onClick={()=>setCnt(c=>Math.min(c+1,cur.n))}>
-          <span style={{fontFamily:"'Amiri',serif",fontSize:32,color:done?'var(--gr)':'var(--gold)'}}>{done?'✓':'﴾'}</span>
-        </div>
-        {done&&<div style={{fontSize:12,color:'var(--gr)',fontStyle:'italic',marginBottom:16}}>{cnt} complete 🤍</div>}
-        <div style={{display:'flex',gap:16,alignItems:'center'}}>
-          <div style={{background:'rgba(255,255,255,.05)',border:'1px solid var(--br)',borderRadius:12,padding:'8px 20px',cursor:'pointer',fontSize:11,color:'var(--ts)',opacity:idx===0?0.3:1}} onClick={()=>{if(idx>0){setIdx(i=>i-1);setCnt(0);}}}>← Prev</div>
-          <div style={{fontSize:10,color:'var(--td)',cursor:'pointer',textDecoration:'underline',opacity:.6}} onClick={()=>setCnt(0)}>Reset</div>
-          <div style={{background:'rgba(255,255,255,.05)',border:'1px solid var(--br)',borderRadius:12,padding:'8px 20px',cursor:'pointer',fontSize:11,color:'var(--ts)',opacity:idx===ZIKR_LIST.length-1?0.3:1}} onClick={()=>{if(idx<ZIKR_LIST.length-1){setIdx(i=>i+1);setCnt(0);}}}>Next →</div>
-        </div>
-      </div>
-    </div>
-  );
-}
+                // Auto-scroll
+                setTimeout(() => {
+                    if (wrapRef.current) wrapRef.current.scrollTop = isToday(planDate) ? Math.max(0, mtp(nowM()) - 180) : mtp(4 * 60);
+                }, 100);
 
-// ── KITAB ──
-function Kitab(){
-  const [tab,setTab]=useState('qasidas');
-  const [op,setOp]=useState({});
-  const [customDuas,setCustomDuas]=useState(()=>store.get('rawdah_custom_duas',[]));
-  const [addingDua,setAddingDua]=useState(false);
-  const [nd,setNd]=useState({title:'',cat:'Personal',a:'',t:'',tr:'',src:''});
-  const tog=id=>setOp(p=>({...p,[id]:!p[id]}));
-  const allDuas=[...DUAS,...customDuas];
-  const cats=[...new Set(allDuas.map(d=>d.cat))];
-  const G='var(--gold)',B='var(--br)';
+                // Fetch Hijri and Salah times for THIS specific plan date
+                const dt = new Date(planDate);
+                const dStr = `${String(dt.getDate()).padStart(2, '0')}-${String(dt.getMonth() + 1).padStart(2, '0')}-${dt.getFullYear()}`;
+                fetch(`https://api.aladhan.com/v1/timings/${dStr}?latitude=-26.3189&longitude=27.8355&method=2`)
+                    .then(r => r.json()).then(d => {
+                        const H = d.data.date.hijri;
+                        if (H) setPlanHijri(`${H.day} ${H.month.en} ${H.year} AH`);
+                        const T = d.data.timings;
+                        const map = { fajr_awal: 'Fajr', shuruq: 'Sunrise', zuhr_awal: 'Dhuhr', asr_awal: 'Asr', maghrib: 'Maghrib', isha_awal: 'Isha' };
+                        setPlanSalah(salah.map(s => map[s.key] && T[map[s.key]] ? { ...s, time: T[map[s.key]].slice(0, 5) } : s));
+                    }).catch(e => console.log(e));
 
-  const saveNewDua=()=>{
-    if(!nd.title.trim())return;
-    const updated=[...customDuas,{...nd,id:`cd${Date.now()}`}];
-    setCustomDuas(updated);store.set('rawdah_custom_duas',updated);setAddingDua(false);setNd({title:'',cat:'Personal',a:'',t:'',tr:'',src:''});
-  };
+            }, [dateKey(planDate), salah]);
 
-  return(
-    <div className="cnt scr">
-      <div style={{padding:'16px 18px 4px'}}>
-        <div style={{fontFamily:"'Cinzel',serif",fontSize:18,letterSpacing:1}}>الكتاب</div>
-        <div style={{fontSize:11,fontStyle:'italic',color:'var(--ts)',marginTop:2}}>Your digital reference — Qasidas · Duas · Night Surahs · Dalail</div>
-      </div>
-      <div style={{display:'flex',margin:'12px 16px',background:'rgba(255,255,255,.04)',border:`1px solid ${B}`,borderRadius:12,overflow:'hidden'}}>
-        {[['qasidas','Qasidas'],['duas','Duas'],['surahs','Surahs'],['dalail','Dalail']].map(([k,l])=>(
-          <div key={k} style={{flex:1,padding:'10px 4px',textAlign:'center',fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:tab===k?G:'var(--td)',cursor:'pointer',background:tab===k?'rgba(201,168,76,.12)':'transparent',borderBottom:tab===k?`2px solid ${G}`:'2px solid transparent'}} onClick={()=>setTab(k)}>{l}</div>
-        ))}
-      </div>
+            useEffect(() => { const iv = setInterval(() => setNowY(mtp(nowM())), 30000); return () => clearInterval(iv); }, []);
 
-      {tab==='qasidas'&&QASIDAS.map(q=>(
-        <div key={q.id} style={{margin:'0 16px 10px',background:'var(--card)',border:`1px solid ${B}`,borderRadius:16,overflow:'hidden'}}>
-          <div style={{padding:16,cursor:'pointer',display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12}} onClick={()=>tog(q.id)}>
-            <div><div style={{fontSize:8,letterSpacing:2,textTransform:'uppercase',color:G,opacity:.7,marginBottom:4}}>{q.tag}</div><div style={{fontFamily:"'Cinzel',serif",fontSize:14,marginBottom:2}}>{q.title}</div><div style={{fontSize:11,fontStyle:'italic',color:'var(--ts)'}}>{q.sub}</div></div>
-            <div style={{color:G,opacity:.6,fontSize:14,flexShrink:0,transform:op[q.id]?'rotate(180deg)':'none',transition:'transform .2s'}}>▾</div>
-          </div>
-          {op[q.id]&&<div style={{padding:'0 16px 16px',borderTop:`1px solid ${B}`}}>
-            <div style={{fontStyle:'italic',fontSize:11,color:'var(--ts)',lineHeight:1.7,margin:'12px 0'}}>{q.intro}</div>
-            {q.verses.map((v,i)=><div key={i} style={{marginBottom:14,paddingBottom:14,borderBottom:i<q.verses.length-1?'1px solid rgba(255,255,255,.04)':'none'}}>
-              <div style={{fontFamily:"'Amiri',serif",fontSize:20,direction:'rtl',textAlign:'right',lineHeight:2,marginBottom:4}}>{v.a}</div>
-              <div style={{fontStyle:'italic',fontSize:10.5,color:G,opacity:.8,marginBottom:3}}>{v.t}</div>
-              <div style={{fontSize:10.5,color:'var(--ts)',lineHeight:1.6}}>{v.tr}</div>
-            </div>)}
-          </div>}
-        </div>
-      ))}
+            const saveBlocks = bs => { setBlocks(bs); store.set(`rawdah_blocks_${dateKey(planDate)}`, bs); };
 
-      {tab==='duas'&&<div>
-        {cats.map(cat=><div key={cat}>
-          <div style={{padding:'14px 18px 6px',fontSize:9,letterSpacing:3,textTransform:'uppercase',color:G,opacity:.6}}>{cat}</div>
-          {allDuas.filter(d=>d.cat===cat).map(d=>(
-            <div key={d.id} style={{margin:'0 16px 8px',background:'var(--card)',border:`1px solid ${B}`,borderRadius:14,overflow:'hidden'}}>
-              <div style={{padding:14,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'space-between'}} onClick={()=>tog(d.id)}>
-                <div style={{fontFamily:"'Cinzel',serif",fontSize:12,letterSpacing:.4}}>{d.title}</div>
-                <div style={{color:G,opacity:.6,fontSize:14}}>{op[d.id]?'▴':'▾'}</div>
-              </div>
-              {op[d.id]&&<div style={{padding:'0 14px 14px'}}>
-                <div style={{fontFamily:"'Amiri',serif",fontSize:18,direction:'rtl',textAlign:'right',lineHeight:2,marginBottom:8}}>{d.a}</div>
-                <div style={{fontStyle:'italic',fontSize:10,color:G,opacity:.8,marginBottom:4,lineHeight:1.6}}>{d.t}</div>
-                <div style={{fontSize:10.5,color:'var(--ts)',lineHeight:1.6,marginBottom:6}}>{d.tr}</div>
-                <div style={{fontSize:9,color:'var(--td)',letterSpacing:1.5,textTransform:'uppercase'}}>{d.src}</div>
-              </div>}
-            </div>
-          ))}
-        </div>)}
-        <div style={{margin:'8px 16px 16px',padding:'12px 16px',background:'rgba(201,168,76,.06)',border:`1px solid ${B}`,borderRadius:12,cursor:'pointer',textAlign:'center',fontSize:11,color:G}} onClick={()=>setAddingDua(true)}>+ Add your own dua</div>
-      </div>}
+            const navDay = n => { const d = addDays(planDate, n); setPlanDate(d); };
 
-      {tab==='surahs'&&<div>
-        <div style={{padding:'12px 18px 8px',fontSize:11,fontStyle:'italic',color:'var(--ts)',lineHeight:1.7}}>Recite these after Maghrib before Isha. Each carries its own promise from the Prophet ﷺ.</div>
-        {NIGHT_SURAHS.map(s=>(
-          <div key={s.id} style={{margin:'0 16px 10px',background:'var(--card)',border:`1px solid ${B}`,borderRadius:16,overflow:'hidden'}}>
-            <div style={{padding:16,cursor:'pointer',display:'flex',alignItems:'flex-start',justifyContent:'space-between'}} onClick={()=>tog(s.id)}>
-              <div><div style={{fontFamily:"'Cinzel',serif",fontSize:14,marginBottom:4}}>{s.title}</div><div style={{fontSize:11,fontStyle:'italic',color:G,opacity:.7}}>{s.virtue}</div></div>
-              <div style={{color:G,opacity:.6,fontSize:14,flexShrink:0,transform:op[s.id]?'rotate(180deg)':'none',transition:'transform .2s'}}>▾</div>
-            </div>
-            {op[s.id]&&<div style={{padding:'0 16px 16px',borderTop:`1px solid ${B}`}}>
-              <div style={{fontFamily:"'Amiri',serif",fontSize:20,direction:'rtl',textAlign:'right',lineHeight:2,marginBottom:12}}>{s.arabic}…</div>
-              <div style={{fontSize:11,fontStyle:'italic',color:'var(--ts)',lineHeight:1.7}}>{s.note}</div>
-            </div>}
-          </div>
-        ))}
-      </div>}
-
-      {tab==='dalail'&&<div>
-        <div style={{padding:'12px 18px 8px',fontSize:11,fontStyle:'italic',color:'var(--ts)',lineHeight:1.7}}>Dalail al-Khayrat — by Imam Muhammad al-Jazuli (15th century). Among the most widely read books of salawat in the world. Read your daily hizb after Isha.</div>
-        <div style={{margin:'0 16px 10px',background:'var(--card)',border:`1px solid ${B}`,borderRadius:16,padding:20}}>
-          <div style={{fontSize:9,letterSpacing:3,textTransform:'uppercase',color:G,opacity:.7,marginBottom:8}}>Opening</div>
-          <div style={{fontFamily:"'Cinzel',serif",fontSize:14,marginBottom:14}}>Hizb Al-Awwal</div>
-          <div style={{fontFamily:"'Amiri',serif",fontSize:22,direction:'rtl',textAlign:'right',lineHeight:2,marginBottom:10}}>بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ<br/>اَللّٰهُمَّ صَلِّ عَلٰى سَيِّدِنَا مُحَمَّدٍ النَّبِيِّ الْأُمِّيِّ وَعَلٰى آلِهِ وَصَحْبِهِ وَسَلِّمْ</div>
-          <div style={{fontStyle:'italic',fontSize:11,color:G,opacity:.8,lineHeight:1.7,marginBottom:6}}>Bismillāhir Raḥmānir Raḥīm — Allāhumma ṣalli \'alā Sayyidinā Muḥammadin-nabiyyil ummiyyi wa \'alā ālihi wa ṣaḥbihi wa sallim</div>
-          <div style={{fontSize:11,color:'var(--ts)',lineHeight:1.7}}>In the name of Allah, the Most Gracious, the Most Merciful. O Allah, send blessings upon our Master Muhammad, the unlettered Prophet, and upon his family and companions.</div>
-        </div>
-        <div style={{margin:'0 16px 16px',background:'rgba(201,168,76,.06)',border:`1px solid ${B}`,borderRadius:12,padding:'14px 16px',fontSize:11,fontStyle:'italic',color:'var(--ts)',lineHeight:1.7}}>More hizbaat will be added as we continue building Rawdah. This is your living kitab.</div>
-      </div>}
-
-      {addingDua&&<Modal onClose={()=>setAddingDua(false)} title="Add Your Own Dua" subtitle="It will be saved permanently in your Kitab">
-        {[['Title','title','e.g. Dua for success'],['Category','cat','e.g. Morning, Distress, Travel'],['Arabic','a','Arabic text (optional)'],['Transliteration','t','How it sounds (optional)'],['Translation','tr','English meaning'],['Source','src','e.g. Bukhari (optional)']].map(([lbl,key,ph])=>(
-          <div key={key} style={{marginBottom:10}}>
-            <div style={{fontSize:9,letterSpacing:2,textTransform:'uppercase',color:G,opacity:.7,marginBottom:5}}>{lbl}</div>
-            <input style={{width:'100%',background:'rgba(255,255,255,.05)',border:`1px solid ${B}`,borderRadius:10,padding:'10px 13px',color:'var(--tp)',fontSize:13,fontFamily:"'EB Garamond',serif",outline:'none',direction:key==='a'?'rtl':'ltr'}} placeholder={ph} value={nd[key]} onChange={e=>setNd(p=>({...p,[key]:e.target.value}))}/>
-          </div>
-        ))}
-        <div style={{width:'100%',padding:13,background:G,border:'none',borderRadius:13,fontFamily:"'Cinzel',serif",fontSize:12,letterSpacing:1,color:'#020912',cursor:'pointer',textAlign:'center',fontWeight:600,marginTop:6}} onClick={saveNewDua}>Save to Kitab</div>
-      </Modal>}
-    </div>
-  );
-}
-
-// ── TRACKER ──
-function Tracker({onJumpToPlan}){
-  const dk=`rawdah_tracker_${todayKey()}`;
-  const [tog,setTog]=useState(()=>store.get(dk,{}));
-  const toggle=id=>{const n={...tog,[id]:!tog[id]};setTog(n);store.set(dk,n);};
-
-  // Streak calculation
-  const [streak,setStreak]=useState(()=>{
-    const s=store.get('rawdah_streak',{count:0,last:''});
-    const today=todayKey();
-    const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
-    const yKey=dateKey(yesterday);
-    if(s.last===today)return s.count;
-    if(s.last===yKey)return s.count;
-    return 0;
-  });
-
-  const today=new Date(),td=today.getDate(),dim=new Date(today.getFullYear(),today.getMonth()+1,0).getDate(),fd=new Date(today.getFullYear(),today.getMonth(),1).getDay();
-  const cells=[];
-  for(let i=0;i<fd;i++)cells.push({t:'emp'});
-  for(let d=1;d<=dim;d++){
-    if(d<td-5)cells.push({d,t:'pst'});
-    else if(d===td)cells.push({d,t:'tod'});
-    else if(d<td)cells.push({d,t:'mis'});
-    else cells.push({d,t:'fut'});
-  }
-  const done=Object.values(tog).filter(Boolean).length;
-  const G='var(--gold)',B='var(--br)',C='var(--card)';
-  return(
-    <div className="cnt scr">
-      <div style={{padding:'16px 18px 4px'}}>
-        <div style={{fontFamily:"'Cinzel',serif",fontSize:18,letterSpacing:1}}>Daily Tracker</div>
-        <div style={{fontSize:11,fontStyle:'italic',color:'var(--ts)',marginTop:2}}>Consistency is the key to everything</div>
-      </div>
-      <div style={{margin:16,background:C,border:`1px solid ${B}`,borderRadius:18,padding:20}}>
-        <div style={{textAlign:'center',marginBottom:16}}>
-          <div style={{fontFamily:"'Cinzel',serif",fontSize:52,color:'var(--gb)',lineHeight:1}}>{streak}</div>
-          <div style={{fontSize:10,color:'var(--td)',letterSpacing:2,textTransform:'uppercase',marginTop:2}}>Day Streak 🔥</div>
-        </div>
-        <div style={{display:'flex',gap:8,justifyContent:'space-between'}}>
-          {[{n:done,l:'Today'},{n:TRACK_ITEMS.length,l:'Total'},{n:`${Math.round(done/TRACK_ITEMS.length*100)}%`,l:'Done'}].map(x=>(
-            <div key={x.l} style={{flex:1,textAlign:'center',background:'rgba(255,255,255,.03)',border:`1px solid ${B}`,borderRadius:12,padding:'10px 6px'}}>
-              <div style={{fontFamily:"'Cinzel',serif",fontSize:22}}>{x.n}</div>
-              <div style={{fontSize:9,color:'var(--td)',letterSpacing:1}}>{x.l}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="slbl">Today — Mark Complete</div>
-      {TRACK_ITEMS.map(item=>(
-        <div key={item.id} style={{margin:'0 16px 8px',background:C,border:`1px solid ${B}`,borderRadius:14,padding:14,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-          <div><div style={{fontFamily:"'Cinzel',serif",fontSize:12,letterSpacing:.3,marginBottom:2}}>{item.label}</div><div style={{fontSize:10,fontStyle:'italic',color:'var(--td)'}}>{item.sub}</div></div>
-          <div style={{width:44,height:26,borderRadius:13,cursor:'pointer',transition:'all .3s',position:'relative',background:tog[item.id]?'rgba(109,179,138,.3)':'rgba(255,255,255,.06)',border:`1px solid ${tog[item.id]?'var(--gr)':B}`}} onClick={()=>toggle(item.id)}>
-            <div style={{position:'absolute',top:3,width:18,height:18,borderRadius:'50%',transition:'all .3s',background:tog[item.id]?'var(--gr)':'var(--td)',left:tog[item.id]?22:4}}/>
-          </div>
-        </div>
-      ))}
-      <div className="slbl">{today.toLocaleString('default',{month:'long'})} {today.getFullYear()}</div>
-      <div style={{margin:'0 16px 16px'}}>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:5,marginBottom:6}}>
-          {['S','M','T','W','T','F','S'].map((d,i)=><div key={i} style={{textAlign:'center',fontSize:9,color:'var(--td)',letterSpacing:1,padding:'2px 0'}}>{d}</div>)}
-        </div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:5}}>
-          {cells.map((c,i)=>{
-            const styles={emp:{background:'transparent',border:'none'},pst:{background:'rgba(109,179,138,.15)',border:'1px solid rgba(109,179,138,.2)',color:'var(--gr)'},tod:{background:'rgba(201,168,76,.15)',border:`1px solid ${G}`,color:G},fut:{background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)',color:'var(--td)'},mis:{background:'rgba(180,80,80,.1)',border:'1px solid rgba(180,80,80,.15)',color:'rgba(180,80,80,.6)'}};
-            const canTap=c.t!=='emp'&&c.d;
-            const handleTap=()=>{
-              if(!canTap)return;
-              const d=new Date(today.getFullYear(),today.getMonth(),c.d);
-              onJumpToPlan(d);
+            const onDS = (e, id) => {
+                e.stopPropagation();
+                const cy = e.touches ? e.touches[0].clientY : e.clientY;
+                const rect = gridRef.current.getBoundingClientRect();
+                const st = wrapRef.current.scrollTop;
+                const block = blocks.find(b => b.id === id);
+                setDrag({ id, offsetY: (cy - rect.top + st) - mtp(block.start) });
             };
-            return<div key={i} style={{aspectRatio:1,borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontFamily:"'Cinzel',serif",cursor:canTap?'pointer':'default',...styles[c.t]}} onClick={handleTap}>{c.d||''}</div>;
-          })}
-        </div>
-        <div style={{display:'flex',gap:12,marginTop:12,flexWrap:'wrap'}}>
-          {[['pst','rgba(109,179,138,.15)','var(--gr)','Complete'],['tod','rgba(201,168,76,.15)',G,'Today'],['mis','rgba(180,80,80,.1)','rgba(180,80,80,.6)','Missed'],['fut','rgba(255,255,255,.03)','var(--td)','Upcoming']].map(([k,bg,col,lbl])=>(
-            <div key={k} style={{display:'flex',alignItems:'center',gap:5}}><div style={{width:10,height:10,borderRadius:3,background:bg,border:`1px solid ${col}`}}/><span style={{fontSize:9,color:'var(--td)'}}>{lbl}</span></div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+            const onDM = e => {
+                if (!drag) return; e.preventDefault();
+                const cy = e.touches ? e.touches[0].clientY : e.clientY;
+                const rect = gridRef.current.getBoundingClientRect();
+                const st = wrapRef.current.scrollTop;
+                const snapped = Math.max(0, Math.min(1425, ptm((cy - rect.top + st) - drag.offsetY)));
+                setBlocks(prev => prev.map(b => b.id === drag.id ? { ...b, start: snapped } : b));
+            };
+            const onDE = () => { if (drag) { store.set(`rawdah_blocks_${dateKey(planDate)}`, blocks); } setDrag(null); };
 
-// ── CSS ──
-const GCSS=`
+            const doAdd = () => {
+                if (!nb.title.trim()) return;
+                const newBlocks = [...blocks, { id: `b${Date.now()}`, cat: nb.cat, title: nb.title, note: nb.note, start: parseM(nb.start), dur: Math.max(15, parseInt(nb.dur) || 60) }];
+                saveBlocks(newBlocks); setAdding(false); setNb({ cat: 'ibadah', title: '', note: '', start: '08:00', dur: '60' });
+            };
+
+            const saveTpl = () => { store.set('rawdah_tpl', blocks); setToast('Template saved 🤍'); setTimeout(() => setToast(''), 2500); };
+            const resetTpl = () => { const tpl = store.get('rawdah_tpl', null) || DEF_BLOCKS; saveBlocks(tpl); setToast('Day reset to template'); setTimeout(() => setToast(''), 2000); };
+
+            const handleBlockTap = b => {
+                if (!drag) {
+                    if (b.link) { go(b.link); }
+                    else setSel(b);
+                }
+            };
+
+            const laidOut = layoutBlocks(blocks);
+
+            const G = 'var(--gold)', B = 'var(--br)';
+            return (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    <div style={{ padding: '10px 14px 8px', borderBottom: `1px solid ${B}`, background: 'rgba(2,9,18,.97)', flexShrink: 0 }}>
+                        {/* Date nav row */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,.05)', border: `1px solid ${B}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 14, color: 'var(--ts)' }} onClick={() => navDay(-1)}>‹</div>
+                                <div>
+                                    <div style={{ fontFamily: "'Cinzel',serif", fontSize: 13, letterSpacing: .5, color: isToday(planDate) ? G : 'var(--tp)' }}>
+                                        {isToday(planDate) ? 'Today' : fmtDay(planDate)}
+                                    </div>
+                                    <div style={{ fontSize: 9, color: 'var(--td)', letterSpacing: .5 }}>{new Date(planDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} {planHijri && ` · ${planHijri}`}</div>
+                                </div>
+                                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,.05)', border: `1px solid ${B}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 14, color: 'var(--ts)' }} onClick={() => navDay(1)}>›</div>
+                                {!isToday(planDate) && <div style={{ fontSize: 9, padding: '3px 8px', borderRadius: 8, background: 'rgba(201,168,76,.12)', border: `1px solid ${B}`, color: G, cursor: 'pointer' }} onClick={() => setPlanDate(new Date())}>Today</div>}
+                            </div>
+                            <div style={{ display: 'flex', gap: 5 }}>
+                                <div style={{ background: 'rgba(91,155,213,.1)', border: '1px solid rgba(91,155,213,.3)', borderRadius: 9, padding: '4px 9px', fontSize: 8, color: '#5B9BD5', cursor: 'pointer', letterSpacing: 1.5, textTransform: 'uppercase' }} onClick={() => setJOpen(true)}>Jamaat</div>
+                                <div style={{ background: 'rgba(201,168,76,.12)', border: `1px solid ${B}`, borderRadius: 9, padding: '4px 9px', fontSize: 8, color: G, cursor: 'pointer', letterSpacing: 1.5, textTransform: 'uppercase' }} onClick={saveTpl}>Save ♡</div>
+                                <div style={{ background: 'rgba(255,255,255,.04)', border: `1px solid ${B}`, borderRadius: 9, padding: '4px 9px', fontSize: 8, color: 'var(--td)', cursor: 'pointer', letterSpacing: 1.5, textTransform: 'uppercase' }} onClick={resetTpl}>Reset</div>
+                            </div>
+                        </div>
+                        {/* Salah strip */}
+                        <div style={{ display: 'flex', gap: 5, overflowX: 'auto', paddingBottom: 2 }}>
+                            {planSalah.map(s => (
+                                <div key={s.key} style={{ flexShrink: 0, border: `1px solid ${s.jamaat ? 'rgba(91,155,213,.3)' : 'rgba(201,168,76,.15)'}`, borderRadius: 8, padding: '4px 8px', textAlign: 'center', minWidth: 44, background: s.jamaat ? 'rgba(91,155,213,.06)' : 'rgba(255,255,255,.03)' }}>
+                                    <div style={{ fontFamily: "'Amiri',serif", fontSize: s.jamaat ? 8 : 11, color: s.jamaat ? '#5B9BD5' : G, lineHeight: 1, marginBottom: 1, letterSpacing: s.jamaat ? 1 : 0, textTransform: s.jamaat ? 'uppercase' : 'none' }}>{s.jamaat ? 'J' : (s.arabic || s.label.charAt(0))}</div>
+                                    <div style={{ fontFamily: "'Cinzel',serif", fontSize: 9, color: 'var(--tp)' }}>{s.time}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <div ref={wrapRef} style={{ flex: 1, overflowY: 'scroll', overflowX: 'hidden', position: 'relative', touchAction: drag ? 'none' : 'pan-y', paddingBottom: '120px' }}
+                        onMouseMove={onDM} onTouchMove={onDM} onMouseUp={onDE} onTouchEnd={onDE} onMouseLeave={onDE}>
+                        <div style={{ position: 'relative', display: 'flex', height: totalH }}>
+                            <div style={{ width: 48, flexShrink: 0, position: 'relative', height: totalH }}>
+                                {Array.from({ length: 25 }, (_, i) => <div key={i} style={{ position: 'absolute', right: 7, top: i * HOUR_H, fontFamily: "'Cinzel',serif", fontSize: 8, color: 'var(--td)', letterSpacing: .5, transform: 'translateY(-50%)', whiteSpace: 'nowrap' }}>{i < 24 ? `${String(i).padStart(2, '0')}:00` : ''}</div>)}
+                            </div>
+                            <div ref={gridRef} style={{ flex: 1, position: 'relative', borderLeft: '1px solid rgba(201,168,76,.1)', height: totalH }}>
+                                {Array.from({ length: 24 * 4 }, (_, i) => <div key={i} style={{ position: 'absolute', left: 0, right: 0, top: i * SLOT_H, borderTop: i % 4 === 0 ? '1px solid rgba(201,168,76,.1)' : i % 2 === 0 ? '1px dashed rgba(255,255,255,.04)' : '1px solid rgba(255,255,255,.025)', pointerEvents: 'none' }} />)}
+
+                                {planSalah.map(s => {
+                                    const top = mtp(parseM(s.time)), type = s.jamaat ? 'jm' : 'aw';
+                                    return <div key={s.key} style={{ position: 'absolute', left: 0, right: 0, top, zIndex: 5, pointerEvents: 'none' }}>
+                                        <div style={{ height: 1, background: s.jamaat ? 'linear-gradient(90deg,#5B9BD5,rgba(91,155,213,.15))' : 'linear-gradient(90deg,var(--gold),rgba(201,168,76,.15))' }} />
+                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 2, padding: '2px 8px 2px 4px', borderRadius: '0 6px 6px 0', background: s.jamaat ? 'rgba(91,155,213,.09)' : 'rgba(201,168,76,.09)' }}>
+                                            {s.arabic && <span style={{ fontFamily: "'Amiri',serif", fontSize: 13, lineHeight: 1, color: s.jamaat ? '#5B9BD5' : G }}>{s.arabic}</span>}
+                                            <span style={{ fontSize: 8, letterSpacing: 1.5, textTransform: 'uppercase', color: s.jamaat ? '#5B9BD5' : G }}>{s.label}</span>
+                                            <span style={{ fontSize: 8, color: 'var(--td)', fontFamily: "'Cinzel',serif" }}>{s.time}</span>
+                                        </div>
+                                    </div>;
+                                })}
+
+                                {isToday(planDate) && <div style={{ position: 'absolute', left: 0, right: 0, top: nowY, zIndex: 7, pointerEvents: 'none' }}>
+                                    <div style={{ position: 'absolute', left: -3, width: 7, height: 7, borderRadius: '50%', background: '#E84040', transform: 'translateY(-3px)' }} />
+                                    <div style={{ position: 'absolute', left: 4, right: 0, height: 1, background: 'rgba(232,64,64,.5)' }} />
+                                </div>}
+
+                                {laidOut.map(b => {
+                                    const cat = CATS[b.cat] || CATS.custom;
+                                    const top = mtp(b.start), height = Math.max(SLOT_H, mtp(b.dur));
+                                    const isDrag = drag?.id === b.id, small = height < 36;
+                                    const hasLink = !!b.link;
+                                    const colW = 100 / b._tc;
+                                    const colL = b._col * colW;
+                                    const zIdx = isDrag ? 20 : (b._col + 4);
+
+                                    return <div key={b.id} style={{
+                                        position: 'absolute',
+                                        left: `calc(${colL}% + ${b._col * 4}px)`,
+                                        width: `calc(${colW}% - 2px)`,
+                                        top, height,
+                                        background: cat.bg,
+                                        border: `2px solid #0A1628`,
+                                        borderRadius: 10, display: 'flex', overflow: 'hidden',
+                                        cursor: 'pointer',
+                                        zIndex: zIdx,
+                                        boxShadow: isDrag ? '0 10px 40px rgba(0,0,0,.7), inset 0 0 0 1px ' + cat.border : b._tc > 1 ? '-2px 2px 8px rgba(0,0,0,.3), inset 0 0 0 1px ' + cat.border : 'inset 0 0 0 1px ' + cat.border,
+                                        opacity: isDrag ? 0.92 : 1
+                                    }} onClick={() => handleBlockTap(b)}>
+                                        <div style={{ width: 16, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'grab', fontSize: 9, color: 'rgba(255,255,255,.2)', touchAction: 'none' }}
+                                            onMouseDown={e => onDS(e, b.id)} onTouchStart={e => onDS(e, b.id)} onClick={e => e.stopPropagation()}>⠿</div>
+                                        <div style={{ flex: 1, padding: '4px 4px 4px 0', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', overflow: 'hidden' }}>
+                                            <div style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: .2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: cat.color }}>{b.title}{hasLink ? ' →' : ''}</div>
+                                            {!small && <div style={{ fontSize: 7, opacity: .55, letterSpacing: .3, marginTop: 1, whiteSpace: 'nowrap' }}>{fmtT(b.start)}–{fmtT(b.start + b.dur)}</div>}
+                                        </div>
+                                        {!small && b._tc === 1 && <div style={{ padding: '4px 4px 0 0', fontSize: 11, flexShrink: 0 }}>{cat.icon}</div>}
+                                    </div>;
+                                })}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ position: 'absolute', bottom: 86, right: 16, width: 50, height: 50, borderRadius: '50%', background: G, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 15, boxShadow: '0 4px 20px rgba(201,168,76,.4)', fontSize: 26, color: '#020912', fontWeight: 700 }} onClick={() => setAdding(true)}>+</div>
+                    {toast && <div style={{ position: 'fixed', bottom: 110, left: '50%', transform: 'translateX(-50%)', background: 'rgba(109,179,138,.2)', border: '1px solid var(--gr)', borderRadius: 12, padding: '10px 20px', fontSize: 12, color: 'var(--gr)', zIndex: 60, pointerEvents: 'none' }}>{toast}</div>}
+
+                    {sel && <Modal onClose={() => setSel(null)} title={sel.title} subtitle={`${fmtT(sel.start)} – ${fmtT(sel.start + sel.dur)} · ${sel.dur} min · ${CATS[sel.cat]?.label}`}>
+                        {sel.note && <div style={{ marginBottom: 16 }}><div style={{ fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', color: G, opacity: .7, marginBottom: 8 }}>About this block</div><div style={{ fontSize: 13, color: 'var(--ts)', lineHeight: 1.8 }}>{sel.note}</div></div>}
+                        <div style={{ marginBottom: 16 }}>
+                            <div style={{ fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', color: G, opacity: .7, marginBottom: 8 }}>Reschedule</div>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <input style={{ flex: 1, background: 'rgba(255,255,255,.05)', border: `1px solid ${B}`, borderRadius: 10, padding: '11px 13px', color: 'var(--tp)', fontSize: 13, fontFamily: "'EB Garamond',serif", outline: 'none' }} type="time" defaultValue={fmtT(sel.start)} onChange={e => setBlocks(prev => prev.map(b => b.id === sel.id ? { ...b, start: parseM(e.target.value) } : b))} />
+                                <input style={{ flex: 1, background: 'rgba(255,255,255,.05)', border: `1px solid ${B}`, borderRadius: 10, padding: '11px 13px', color: 'var(--tp)', fontSize: 13, fontFamily: "'EB Garamond',serif", outline: 'none' }} placeholder="Duration (min)" defaultValue={sel.dur} onChange={e => setBlocks(prev => prev.map(b => b.id === sel.id ? { ...b, dur: Math.max(15, parseInt(e.target.value) || 15) } : b))} />
+                            </div>
+                        </div>
+                        <div style={{ width: '100%', padding: 13, background: 'rgba(220,80,80,.12)', border: '1px solid rgba(220,80,80,.2)', borderRadius: 13, fontFamily: "'Cinzel',serif", fontSize: 12, letterSpacing: 1, color: 'rgba(220,80,80,.8)', cursor: 'pointer', textAlign: 'center', marginTop: 8 }} onClick={() => { saveBlocks(blocks.filter(b => b.id !== sel.id)); setSel(null); }}>Remove Block</div>
+                    </Modal>}
+
+                    {adding && <Modal onClose={() => setAdding(false)} title="New Block" subtitle="Add anything to your day">
+                        <div style={{ marginBottom: 16 }}>
+                            <div style={{ fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', color: G, opacity: .7, marginBottom: 8 }}>Category</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 7 }}>
+                                {Object.entries(CATS).map(([k, v]) => <div key={k} style={{ border: `1px solid ${nb.cat === k ? G : B}`, borderRadius: 11, padding: '9px 6px', textAlign: 'center', cursor: 'pointer', background: nb.cat === k ? 'rgba(201,168,76,.12)' : 'rgba(255,255,255,.03)' }} onClick={() => setNb(p => ({ ...p, cat: k }))}>
+                                    <div style={{ fontSize: 18, marginBottom: 3 }}>{v.icon}</div>
+                                    <div style={{ fontSize: 8, letterSpacing: 1, textTransform: 'uppercase', color: nb.cat === k ? G : 'var(--td)' }}>{v.label}</div>
+                                </div>)}
+                            </div>
+                        </div>
+                        {[['Title', 'text', 'e.g. Client meeting, Gym...', 'title'], ['Note (optional)', 'text', 'Details, reminders...', 'note']].map(([lbl, type, ph, key]) => (
+                            <div key={key} style={{ marginBottom: 12 }}>
+                                <div style={{ fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', color: G, opacity: .7, marginBottom: 6 }}>{lbl}</div>
+                                <input style={{ width: '100%', background: 'rgba(255,255,255,.05)', border: `1px solid ${B}`, borderRadius: 10, padding: '11px 13px', color: 'var(--tp)', fontSize: 13, fontFamily: "'EB Garamond',serif", outline: 'none' }} type={type} placeholder={ph} value={nb[key]} onChange={e => setNb(p => ({ ...p, [key]: e.target.value }))} />
+                            </div>
+                        ))}
+                        <div style={{ marginBottom: 12 }}>
+                            <div style={{ fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', color: G, opacity: .7, marginBottom: 6 }}>Start Time & Duration (min)</div>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <input style={{ flex: 1, background: 'rgba(255,255,255,.05)', border: `1px solid ${B}`, borderRadius: 10, padding: '11px 13px', color: 'var(--tp)', fontSize: 13, outline: 'none' }} type="time" value={nb.start} onChange={e => setNb(p => ({ ...p, start: e.target.value }))} />
+                                <input style={{ flex: 1, background: 'rgba(255,255,255,.05)', border: `1px solid ${B}`, borderRadius: 10, padding: '11px 13px', color: 'var(--tp)', fontSize: 13, fontFamily: "'EB Garamond',serif", outline: 'none' }} placeholder="Minutes" value={nb.dur} onChange={e => setNb(p => ({ ...p, dur: e.target.value }))} />
+                            </div>
+                        </div>
+                        <div style={{ width: '100%', padding: 13, background: G, border: 'none', borderRadius: 13, fontFamily: "'Cinzel',serif", fontSize: 12, letterSpacing: 1, color: '#020912', cursor: 'pointer', textAlign: 'center', fontWeight: 600 }} onClick={doAdd}>Add to Day</div>
+                    </Modal>}
+
+                    {jOpen && <Modal onClose={() => setJOpen(false)} title="Masjid Himayatul Islam" subtitle="Lenasia Ext. 1 · Lark Street · Update when the board changes">
+                        {salah.filter(s => s.jamaat).map(s => (
+                            <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                                <div style={{ fontSize: 12, color: 'var(--ts)', width: 90, flexShrink: 0 }}>{s.label.replace(' Jamaat', '')}</div>
+                                <input style={{ flex: 1, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(91,155,213,.3)', borderRadius: 8, padding: '8px 12px', color: 'var(--tp)', fontSize: 13, fontFamily: "'Cinzel',serif", outline: 'none' }} type="time" value={s.time} onChange={e => setSalah(prev => { const u = prev.map(p => p.key === s.key ? { ...p, time: e.target.value } : p); store.set('rawdah_jamaat', u); return u; })} />
+                            </div>
+                        ))}
+                        <div style={{ width: '100%', padding: 13, background: G, border: 'none', borderRadius: 13, fontFamily: "'Cinzel',serif", fontSize: 12, letterSpacing: 1, color: '#020912', cursor: 'pointer', textAlign: 'center', fontWeight: 600, marginTop: 16 }} onClick={() => setJOpen(false)}>Save Jamaat Times</div>
+                        <div style={{ fontSize: 10, color: 'var(--td)', textAlign: 'center', marginTop: 12, fontStyle: 'italic', lineHeight: 1.5 }}>Awal times auto-fetched from Muwaqqit API · Lenasia coordinates</div>
+                    </Modal>}
+                </div>
+            );
+        }
+
+        // ── ROUTINE ──
+        function Routine() {
+            const dk = `rawdah_routine_${todayKey()}`;
+            const [ck, setCk] = useState(() => store.get(dk, {}));
+            const [on, setOn] = useState({});
+            const toggle = id => { const n = { ...ck, [id]: !ck[id] }; setCk(n); store.set(dk, n); };
+            const note = id => setOn(p => ({ ...p, [id]: !p[id] }));
+            const done = Object.values(ck).filter(Boolean).length;
+            const pct = (done / ROUTINE.length) * 100;
+            let ls = null;
+            return (
+                <div className="cnt scr">
+                    <div style={{ padding: '16px 18px 14px' }}>
+                        <div style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: 'var(--gold)', opacity: .7, marginBottom: 3 }}>Fajr Awwal Routine</div>
+                        <div style={{ fontFamily: "'Cinzel',serif", fontSize: 18, marginBottom: 10 }}>The Zikrs</div>
+                        <div style={{ height: 4, background: 'rgba(255,255,255,.06)', borderRadius: 4, overflow: 'hidden' }}><div style={{ height: '100%', background: 'linear-gradient(90deg,var(--gold),var(--gb))', borderRadius: 4, width: `${pct}%`, transition: 'width .4s' }} /></div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 10, color: 'var(--td)' }}><span>{done} of {ROUTINE.length} completed</span><span>{done === ROUTINE.length ? '🤍 May Allah accept' : `${ROUTINE.length - done} remaining`}</span></div>
+                    </div>
+                    {ROUTINE.map(item => {
+                        const ns = item.section !== ls; if (ns) ls = item.section;
+                        return <div key={item.id}>
+                            {ns && <div style={{ margin: '18px 16px 10px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{ flex: 1, height: 1, background: 'var(--br)' }} />
+                                <div style={{ fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--gold)', opacity: .7, whiteSpace: 'nowrap' }}>{item.sectionTitle}</div>
+                                {item.sectionTime && <div style={{ fontSize: 9, color: 'var(--td)', fontStyle: 'italic', whiteSpace: 'nowrap' }}>{item.sectionTime}</div>}
+                                <div style={{ flex: 1, height: 1, background: 'var(--br)' }} />
+                            </div>}
+                            <div style={{ margin: '0 16px 8px', background: 'var(--card)', border: `1px solid ${ck[item.id] ? 'rgba(109,179,138,.25)' : 'var(--br)'}`, borderRadius: 14, padding: '16px 14px', opacity: ck[item.id] ? .55 : 1, transition: 'all .2s' }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--gold)', opacity: .7, marginBottom: 4 }}>{item.type}</div>
+                                        <div style={{ fontFamily: "'Amiri',serif", fontSize: 20, lineHeight: 2, direction: 'rtl', textAlign: 'right', color: 'var(--tp)', marginBottom: 8, whiteSpace: 'pre-line' }}>{item.arabic}</div>
+                                        <div style={{ fontStyle: 'italic', fontSize: 10.5, color: 'var(--gold)', opacity: .85, lineHeight: 1.6, marginBottom: 4, whiteSpace: 'pre-line' }}>{item.translit}</div>
+                                        <div style={{ fontSize: 10.5, color: 'var(--ts)', lineHeight: 1.6, whiteSpace: 'pre-line' }}>{item.translation}</div>
+                                        {item.note && <div>
+                                            <div style={{ marginTop: 8, fontSize: 9, color: 'var(--td)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }} onClick={() => note(item.id)}>
+                                                <span style={{ fontSize: 8 }}>{on[item.id] ? '▼' : '▶'}</span>{on[item.id] ? 'hide note' : 'show note'}
+                                            </div>
+                                            {on[item.id] && <div style={{ fontSize: 9.5, fontStyle: 'italic', color: 'var(--td)', background: 'rgba(201,168,76,.04)', borderLeft: '2px solid rgba(201,168,76,.25)', padding: '6px 10px', marginTop: 8, borderRadius: '0 6px 6px 0', lineHeight: 1.6 }}>{item.note}</div>}
+                                        </div>}
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                                        <div style={{ background: 'rgba(201,168,76,.12)', border: '1px solid rgba(201,168,76,.35)', color: 'var(--gold)', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, whiteSpace: 'nowrap' }}>{item.count}</div>
+                                        <div style={{ width: 30, height: 30, borderRadius: '50%', border: `2px solid ${ck[item.id] ? 'var(--gr)' : 'rgba(255,255,255,.15)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, cursor: 'pointer', background: ck[item.id] ? 'var(--gr)' : 'transparent', color: ck[item.id] ? '#0A1628' : 'transparent', transition: 'all .2s' }} onClick={() => toggle(item.id)}>{ck[item.id] ? '✓' : ''}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>;
+                    })}
+                    <div style={{ textAlign: 'center', padding: '24px 20px', borderTop: '1px solid rgba(255,255,255,.05)' }}>
+                        <div style={{ fontFamily: "'Amiri',serif", fontSize: 22, color: 'var(--gold)', direction: 'rtl', marginBottom: 8 }}>رَبَّنَا تَقَبَّلْ مِنَّا</div>
+                        <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--td)' }}>Rabbanā taqabbal minnā — Our Lord, accept from us</div>
+                    </div>
+                </div>
+            );
+        }
+        // ── ZIKR ──
+        function Zikr() {
+            const [idx, setIdx] = useState(0); const [cnt, setCnt] = useState(0);
+            const cur = ZIKR_LIST[idx]; const done = cnt >= cur.n; const pct = Math.min(cnt / cur.n, 1);
+            const R = 56, C = 2 * Math.PI * R;
+            return (
+                <div className="cnt scr">
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, padding: 20, textAlign: 'center' }}>
+                        <div style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: 'var(--gold)', opacity: .7, marginBottom: 16 }}>{idx + 1} of {ZIKR_LIST.length} · tap to count</div>
+                        <div style={{ fontFamily: "'Amiri',serif", fontSize: 34, color: 'var(--tp)', direction: 'rtl', lineHeight: 1.8, marginBottom: 8 }}>{cur.a}</div>
+                        <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--gold)', opacity: .85, marginBottom: 4 }}>{cur.t}</div>
+                        <div style={{ fontSize: 12, color: 'var(--ts)', marginBottom: 36, fontStyle: 'italic' }}>{cur.tr}</div>
+                        <div style={{ position: 'relative', width: 130, height: 130, margin: '0 auto 24px' }}>
+                            <svg width="130" height="130" style={{ position: 'absolute', inset: 0, transform: 'rotate(-90deg)' }}>
+                                <circle cx="65" cy="65" r={R} fill="none" stroke="rgba(201,168,76,.1)" strokeWidth="4" />
+                                <circle cx="65" cy="65" r={R} fill="none" stroke={done ? 'var(--gr)' : 'var(--gold)'} strokeWidth="4" strokeDasharray={C} strokeDashoffset={C * (1 - pct)} strokeLinecap="round" style={{ transition: 'stroke-dashoffset .15s ease,stroke .3s' }} />
+                            </svg>
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                <div style={{ fontFamily: "'Cinzel',serif", fontSize: 42, color: 'var(--gb)', lineHeight: 1 }}>{cnt}</div>
+                                <div style={{ fontSize: 11, color: 'var(--td)' }}>of {cur.n}</div>
+                            </div>
+                        </div>
+                        <div style={{ width: 100, height: 100, borderRadius: '50%', background: done ? 'rgba(109,179,138,.1)' : 'rgba(201,168,76,.08)', border: `2px solid ${done ? 'rgba(109,179,138,.5)' : 'rgba(201,168,76,.3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', margin: '0 auto 28px', position: 'relative' }} onClick={() => setCnt(c => Math.min(c + 1, cur.n))}>
+                            <span style={{ fontFamily: "'Amiri',serif", fontSize: 32, color: done ? 'var(--gr)' : 'var(--gold)' }}>{done ? '✓' : '﴾'}</span>
+                        </div>
+                        {done && <div style={{ fontSize: 12, color: 'var(--gr)', fontStyle: 'italic', marginBottom: 16 }}>{cnt} complete 🤍</div>}
+                        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                            <div style={{ background: 'rgba(255,255,255,.05)', border: '1px solid var(--br)', borderRadius: 12, padding: '8px 20px', cursor: 'pointer', fontSize: 11, color: 'var(--ts)', opacity: idx === 0 ? 0.3 : 1 }} onClick={() => { if (idx > 0) { setIdx(i => i - 1); setCnt(0); } }}>← Prev</div>
+                            <div style={{ fontSize: 10, color: 'var(--td)', cursor: 'pointer', textDecoration: 'underline', opacity: .6 }} onClick={() => setCnt(0)}>Reset</div>
+                            <div style={{ background: 'rgba(255,255,255,.05)', border: '1px solid var(--br)', borderRadius: 12, padding: '8px 20px', cursor: 'pointer', fontSize: 11, color: 'var(--ts)', opacity: idx === ZIKR_LIST.length - 1 ? 0.3 : 1 }} onClick={() => { if (idx < ZIKR_LIST.length - 1) { setIdx(i => i + 1); setCnt(0); } }}>Next →</div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ── KITAB ──
+        function Kitab() {
+            const [tab, setTab] = useState('qasidas');
+            const [op, setOp] = useState({});
+            const [customDuas, setCustomDuas] = useState(() => store.get('rawdah_custom_duas', []));
+            const [addingDua, setAddingDua] = useState(false);
+            const [nd, setNd] = useState({ title: '', cat: 'Personal', a: '', t: '', tr: '', src: '' });
+            const tog = id => setOp(p => ({ ...p, [id]: !p[id] }));
+            const allDuas = [...DUAS, ...customDuas];
+            const cats = [...new Set(allDuas.map(d => d.cat))];
+            const G = 'var(--gold)', B = 'var(--br)';
+
+            const saveNewDua = () => {
+                if (!nd.title.trim()) return;
+                const updated = [...customDuas, { ...nd, id: `cd${Date.now()}` }];
+                setCustomDuas(updated); store.set('rawdah_custom_duas', updated); setAddingDua(false); setNd({ title: '', cat: 'Personal', a: '', t: '', tr: '', src: '' });
+            };
+
+            return (
+                <div className="cnt scr">
+                    <div style={{ padding: '16px 18px 4px' }}>
+                        <div style={{ fontFamily: "'Cinzel',serif", fontSize: 18, letterSpacing: 1 }}>الكتاب</div>
+                        <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--ts)', marginTop: 2 }}>Your digital reference — Qasidas · Duas · Night Surahs · Dalail</div>
+                    </div>
+                    <div style={{ display: 'flex', margin: '12px 16px', background: 'rgba(255,255,255,.04)', border: `1px solid ${B}`, borderRadius: 12, overflow: 'hidden' }}>
+                        {[['qasidas', 'Qasidas'], ['duas', 'Duas'], ['surahs', 'Surahs'], ['dalail', 'Dalail']].map(([k, l]) => (
+                            <div key={k} style={{ flex: 1, padding: '10px 4px', textAlign: 'center', fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', color: tab === k ? G : 'var(--td)', cursor: 'pointer', background: tab === k ? 'rgba(201,168,76,.12)' : 'transparent', borderBottom: tab === k ? `2px solid ${G}` : '2px solid transparent' }} onClick={() => setTab(k)}>{l}</div>
+                        ))}
+                    </div>
+
+                    {tab === 'qasidas' && QASIDAS.map(q => (
+                        <div key={q.id} style={{ margin: '0 16px 10px', background: 'var(--card)', border: `1px solid ${B}`, borderRadius: 16, overflow: 'hidden' }}>
+                            <div style={{ padding: 16, cursor: 'pointer', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }} onClick={() => tog(q.id)}>
+                                <div><div style={{ fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', color: G, opacity: .7, marginBottom: 4 }}>{q.tag}</div><div style={{ fontFamily: "'Cinzel',serif", fontSize: 14, marginBottom: 2 }}>{q.title}</div><div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--ts)' }}>{q.sub}</div></div>
+                                <div style={{ color: G, opacity: .6, fontSize: 14, flexShrink: 0, transform: op[q.id] ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▾</div>
+                            </div>
+                            {op[q.id] && <div style={{ padding: '0 16px 16px', borderTop: `1px solid ${B}` }}>
+                                <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--ts)', lineHeight: 1.7, margin: '12px 0' }}>{q.intro}</div>
+                                {q.verses.map((v, i) => <div key={i} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: i < q.verses.length - 1 ? '1px solid rgba(255,255,255,.04)' : 'none' }}>
+                                    <div style={{ fontFamily: "'Amiri',serif", fontSize: 20, direction: 'rtl', textAlign: 'right', lineHeight: 2, marginBottom: 4 }}>{v.a}</div>
+                                    <div style={{ fontStyle: 'italic', fontSize: 10.5, color: G, opacity: .8, marginBottom: 3 }}>{v.t}</div>
+                                    <div style={{ fontSize: 10.5, color: 'var(--ts)', lineHeight: 1.6 }}>{v.tr}</div>
+                                </div>)}
+                            </div>}
+                        </div>
+                    ))}
+
+                    {tab === 'duas' && <div>
+                        {cats.map(cat => <div key={cat}>
+                            <div style={{ padding: '14px 18px 6px', fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: G, opacity: .6 }}>{cat}</div>
+                            {allDuas.filter(d => d.cat === cat).map(d => (
+                                <div key={d.id} style={{ margin: '0 16px 8px', background: 'var(--card)', border: `1px solid ${B}`, borderRadius: 14, overflow: 'hidden' }}>
+                                    <div style={{ padding: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={() => tog(d.id)}>
+                                        <div style={{ fontFamily: "'Cinzel',serif", fontSize: 12, letterSpacing: .4 }}>{d.title}</div>
+                                        <div style={{ color: G, opacity: .6, fontSize: 14 }}>{op[d.id] ? '▴' : '▾'}</div>
+                                    </div>
+                                    {op[d.id] && <div style={{ padding: '0 14px 14px' }}>
+                                        <div style={{ fontFamily: "'Amiri',serif", fontSize: 18, direction: 'rtl', textAlign: 'right', lineHeight: 2, marginBottom: 8 }}>{d.a}</div>
+                                        <div style={{ fontStyle: 'italic', fontSize: 10, color: G, opacity: .8, marginBottom: 4, lineHeight: 1.6 }}>{d.t}</div>
+                                        <div style={{ fontSize: 10.5, color: 'var(--ts)', lineHeight: 1.6, marginBottom: 6 }}>{d.tr}</div>
+                                        <div style={{ fontSize: 9, color: 'var(--td)', letterSpacing: 1.5, textTransform: 'uppercase' }}>{d.src}</div>
+                                    </div>}
+                                </div>
+                            ))}
+                        </div>)}
+                        <div style={{ margin: '8px 16px 16px', padding: '12px 16px', background: 'rgba(201,168,76,.06)', border: `1px solid ${B}`, borderRadius: 12, cursor: 'pointer', textAlign: 'center', fontSize: 11, color: G }} onClick={() => setAddingDua(true)}>+ Add your own dua</div>
+                    </div>}
+
+                    {tab === 'surahs' && <div>
+                        <div style={{ padding: '12px 18px 8px', fontSize: 11, fontStyle: 'italic', color: 'var(--ts)', lineHeight: 1.7 }}>Recite these after Maghrib before Isha. Each carries its own promise from the Prophet ﷺ.</div>
+                        {NIGHT_SURAHS.map(s => (
+                            <div key={s.id} style={{ margin: '0 16px 10px', background: 'var(--card)', border: `1px solid ${B}`, borderRadius: 16, overflow: 'hidden' }}>
+                                <div style={{ padding: 16, cursor: 'pointer', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }} onClick={() => tog(s.id)}>
+                                    <div><div style={{ fontFamily: "'Cinzel',serif", fontSize: 14, marginBottom: 4 }}>{s.title}</div><div style={{ fontSize: 11, fontStyle: 'italic', color: G, opacity: .7 }}>{s.virtue}</div></div>
+                                    <div style={{ color: G, opacity: .6, fontSize: 14, flexShrink: 0, transform: op[s.id] ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▾</div>
+                                </div>
+                                {op[s.id] && <div style={{ padding: '0 16px 16px', borderTop: `1px solid ${B}` }}>
+                                    <div style={{ fontFamily: "'Amiri',serif", fontSize: 20, direction: 'rtl', textAlign: 'right', lineHeight: 2, marginBottom: 12 }}>{s.arabic}…</div>
+                                    <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--ts)', lineHeight: 1.7 }}>{s.note}</div>
+                                </div>}
+                            </div>
+                        ))}
+                    </div>}
+
+                    {tab === 'dalail' && <div>
+                        <div style={{ padding: '12px 18px 8px', fontSize: 11, fontStyle: 'italic', color: 'var(--ts)', lineHeight: 1.7 }}>Dalail al-Khayrat — by Imam Muhammad al-Jazuli (15th century). Among the most widely read books of salawat in the world. Read your daily hizb after Isha.</div>
+                        <div style={{ margin: '0 16px 10px', background: 'var(--card)', border: `1px solid ${B}`, borderRadius: 16, padding: 20 }}>
+                            <div style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: G, opacity: .7, marginBottom: 8 }}>Opening</div>
+                            <div style={{ fontFamily: "'Cinzel',serif", fontSize: 14, marginBottom: 14 }}>Hizb Al-Awwal</div>
+                            <div style={{ fontFamily: "'Amiri',serif", fontSize: 22, direction: 'rtl', textAlign: 'right', lineHeight: 2, marginBottom: 10 }}>بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ<br />اَللّٰهُمَّ صَلِّ عَلٰى سَيِّدِنَا مُحَمَّدٍ النَّبِيِّ الْأُمِّيِّ وَعَلٰى آلِهِ وَصَحْبِهِ وَسَلِّمْ</div>
+                            <div style={{ fontStyle: 'italic', fontSize: 11, color: G, opacity: .8, lineHeight: 1.7, marginBottom: 6 }}>Bismillāhir Raḥmānir Raḥīm — Allāhumma ṣalli ’alā Sayyidinā Muḥammadin-nabiyyil ummiyyi wa ’alā ālihi wa ṣaḥbihi wa sallim</div>
+                            <div style={{ fontSize: 11, color: 'var(--ts)', lineHeight: 1.7 }}>In the name of Allah, the Most Gracious, the Most Merciful. O Allah, send blessings upon our Master Muhammad, the unlettered Prophet, and upon his family and companions.</div>
+                        </div>
+                        <div style={{ margin: '0 16px 16px', background: 'rgba(201,168,76,.06)', border: `1px solid ${B}`, borderRadius: 12, padding: '14px 16px', fontSize: 11, fontStyle: 'italic', color: 'var(--ts)', lineHeight: 1.7 }}>More hizbaat will be added as we continue building Rawdah. This is your living kitab.</div>
+                    </div>}
+
+                    {addingDua && <Modal onClose={() => setAddingDua(false)} title="Add Your Own Dua" subtitle="It will be saved permanently in your Kitab">
+                        {[['Title', 'title', 'e.g. Dua for success'], ['Category', 'cat', 'e.g. Morning, Distress, Travel'], ['Arabic', 'a', 'Arabic text (optional)'], ['Transliteration', 't', 'How it sounds (optional)'], ['Translation', 'tr', 'English meaning'], ['Source', 'src', 'e.g. Bukhari (optional)']].map(([lbl, key, ph]) => (
+                            <div key={key} style={{ marginBottom: 10 }}>
+                                <div style={{ fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', color: G, opacity: .7, marginBottom: 5 }}>{lbl}</div>
+                                <input style={{ width: '100%', background: 'rgba(255,255,255,.05)', border: `1px solid ${B}`, borderRadius: 10, padding: '10px 13px', color: 'var(--tp)', fontSize: 13, fontFamily: "'EB Garamond',serif", outline: 'none', direction: key === 'a' ? 'rtl' : 'ltr' }} placeholder={ph} value={nd[key]} onChange={e => setNd(p => ({ ...p, [key]: e.target.value }))} />
+                            </div>
+                        ))}
+                        <div style={{ width: '100%', padding: 13, background: G, border: 'none', borderRadius: 13, fontFamily: "'Cinzel',serif", fontSize: 12, letterSpacing: 1, color: '#020912', cursor: 'pointer', textAlign: 'center', fontWeight: 600, marginTop: 6 }} onClick={saveNewDua}>Save to Kitab</div>
+                    </Modal>}
+                </div>
+            );
+        }
+
+        // ── TRACKER ──
+        function Tracker({ onJumpToPlan }) {
+            const dk = `rawdah_tracker_${todayKey()}`;
+            const [tog, setTog] = useState(() => store.get(dk, {}));
+            const toggle = id => { const n = { ...tog, [id]: !tog[id] }; setTog(n); store.set(dk, n); };
+
+            // Streak calculation
+            const [streak, setStreak] = useState(() => {
+                const s = store.get('rawdah_streak', { count: 0, last: '' });
+                const today = todayKey();
+                const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+                const yKey = dateKey(yesterday);
+                if (s.last === today) return s.count;
+                if (s.last === yKey) return s.count;
+                return 0;
+            });
+
+            const today = new Date(), td = today.getDate(), dim = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate(), fd = new Date(today.getFullYear(), today.getMonth(), 1).getDay();
+            const cells = [];
+            for (let i = 0; i < fd; i++)cells.push({ t: 'emp' });
+            for (let d = 1; d <= dim; d++) {
+                if (d < td - 5) cells.push({ d, t: 'pst' });
+                else if (d === td) cells.push({ d, t: 'tod' });
+                else if (d < td) cells.push({ d, t: 'mis' });
+                else cells.push({ d, t: 'fut' });
+            }
+            const done = Object.values(tog).filter(Boolean).length;
+            const G = 'var(--gold)', B = 'var(--br)', C = 'var(--card)';
+            return (
+                <div className="cnt scr">
+                    <div style={{ padding: '16px 18px 4px' }}>
+                        <div style={{ fontFamily: "'Cinzel',serif", fontSize: 18, letterSpacing: 1 }}>Daily Tracker</div>
+                        <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--ts)', marginTop: 2 }}>Consistency is the key to everything</div>
+                    </div>
+                    <div style={{ margin: 16, background: C, border: `1px solid ${B}`, borderRadius: 18, padding: 20 }}>
+                        <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                            <div style={{ fontFamily: "'Cinzel',serif", fontSize: 52, color: 'var(--gb)', lineHeight: 1 }}>{streak}</div>
+                            <div style={{ fontSize: 10, color: 'var(--td)', letterSpacing: 2, textTransform: 'uppercase', marginTop: 2 }}>Day Streak 🔥</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between' }}>
+                            {[{ n: done, l: 'Today' }, { n: TRACK_ITEMS.length, l: 'Total' }, { n: `${Math.round(done / TRACK_ITEMS.length * 100)}%`, l: 'Done' }].map(x => (
+                                <div key={x.l} style={{ flex: 1, textAlign: 'center', background: 'rgba(255,255,255,.03)', border: `1px solid ${B}`, borderRadius: 12, padding: '10px 6px' }}>
+                                    <div style={{ fontFamily: "'Cinzel',serif", fontSize: 22 }}>{x.n}</div>
+                                    <div style={{ fontSize: 9, color: 'var(--td)', letterSpacing: 1 }}>{x.l}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="slbl">Today — Mark Complete</div>
+                    {TRACK_ITEMS.map(item => (
+                        <div key={item.id} style={{ margin: '0 16px 8px', background: C, border: `1px solid ${B}`, borderRadius: 14, padding: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div><div style={{ fontFamily: "'Cinzel',serif", fontSize: 12, letterSpacing: .3, marginBottom: 2 }}>{item.label}</div><div style={{ fontSize: 10, fontStyle: 'italic', color: 'var(--td)' }}>{item.sub}</div></div>
+                            <div style={{ width: 44, height: 26, borderRadius: 13, cursor: 'pointer', transition: 'all .3s', position: 'relative', background: tog[item.id] ? 'rgba(109,179,138,.3)' : 'rgba(255,255,255,.06)', border: `1px solid ${tog[item.id] ? 'var(--gr)' : B}` }} onClick={() => toggle(item.id)}>
+                                <div style={{ position: 'absolute', top: 3, width: 18, height: 18, borderRadius: '50%', transition: 'all .3s', background: tog[item.id] ? 'var(--gr)' : 'var(--td)', left: tog[item.id] ? 22 : 4 }} />
+                            </div>
+                        </div>
+                    ))}
+                    <div className="slbl">{today.toLocaleString('default', { month: 'long' })} {today.getFullYear()}</div>
+                    <div style={{ margin: '0 16px 16px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 5, marginBottom: 6 }}>
+                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => <div key={i} style={{ textAlign: 'center', fontSize: 9, color: 'var(--td)', letterSpacing: 1, padding: '2px 0' }}>{d}</div>)}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 5 }}>
+                            {cells.map((c, i) => {
+                                const styles = { emp: { background: 'transparent', border: 'none' }, pst: { background: 'rgba(109,179,138,.15)', border: '1px solid rgba(109,179,138,.2)', color: 'var(--gr)' }, tod: { background: 'rgba(201,168,76,.15)', border: `1px solid ${G}`, color: G }, fut: { background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)', color: 'var(--td)' }, mis: { background: 'rgba(180,80,80,.1)', border: '1px solid rgba(180,80,80,.15)', color: 'rgba(180,80,80,.6)' } };
+                                const canTap = c.t !== 'emp' && c.d;
+                                const handleTap = () => {
+                                    if (!canTap) return;
+                                    const d = new Date(today.getFullYear(), today.getMonth(), c.d);
+                                    onJumpToPlan(d);
+                                };
+                                return <div key={i} style={{ aspectRatio: 1, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontFamily: "'Cinzel',serif", cursor: canTap ? 'pointer' : 'default', ...styles[c.t] }} onClick={handleTap}>{c.d || ''}</div>;
+                            })}
+                        </div>
+                        <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+                            {[['pst', 'rgba(109,179,138,.15)', 'var(--gr)', 'Complete'], ['tod', 'rgba(201,168,76,.15)', G, 'Today'], ['mis', 'rgba(180,80,80,.1)', 'rgba(180,80,80,.6)', 'Missed'], ['fut', 'rgba(255,255,255,.03)', 'var(--td)', 'Upcoming']].map(([k, bg, col, lbl]) => (
+                                <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 10, height: 10, borderRadius: 3, background: bg, border: `1px solid ${col}` }} /><span style={{ fontSize: 9, color: 'var(--td)' }}>{lbl}</span></div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ── CSS ──
+        const GCSS = `
 :root{--dp:#020912;--card:#0A1628;--gold:#C9A84C;--gb:#E8C86A;--tp:#F0E6D3;--ts:#8AAABF;--td:#3D5A70;--br:rgba(201,168,76,.18);--gr:#6DB38A;}
 .app{position:relative;z-index:1;height:100vh;display:flex;flex-direction:column;max-width:430px;margin:0 auto;}
 .splash{position:fixed;inset:0;z-index:100;background:var(--dp);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 1.2s,visibility 1.2s;}
@@ -887,128 +915,129 @@ const GCSS=`
 .geo{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.03;background-image:repeating-linear-gradient(0deg,transparent,transparent 59px,var(--gold) 59px,var(--gold) 60px),repeating-linear-gradient(60deg,transparent,transparent 59px,var(--gold) 59px,var(--gold) 60px),repeating-linear-gradient(120deg,transparent,transparent 59px,var(--gold) 59px,var(--gold) 60px);}
 `;
 
-// ── ROOT ──
-function App(){
-  const [splash,setSplash]=useState(true);
-  const [nav,setNav]=useState('home');
-  const [times,setTimes]=useState([]);
-  const [cd,setCd]=useState('——:——:——');
-  const [next,setNext]=useState(null);
-  const [salah,setSalah]=useState(()=>store.get('rawdah_jamaat',null)||DEF_SALAH);
-  const [hijriDate,setHijriDate]=useState(getHijri());
-  const [jumpDate,setJumpDate]=useState(null);
-  const [deferredPrompt,setDeferredPrompt]=useState(null);
-  const [showInstall,setShowInstall]=useState(false);
+        // ── ROOT ──
+        function App() {
+            const [splash, setSplash] = useState(true);
+            const [nav, setNav] = useState('home');
+            const [times, setTimes] = useState([]);
+            const [cd, setCd] = useState('——:——:——');
+            const [next, setNext] = useState(null);
+            const [salah, setSalah] = useState(() => store.get('rawdah_jamaat', null) || DEF_SALAH);
+            const [hijriDate, setHijriDate] = useState(getHijri());
+            const [jumpDate, setJumpDate] = useState(null);
+            const [deferredPrompt, setDeferredPrompt] = useState(null);
+            const [showInstall, setShowInstall] = useState(false);
 
-  useEffect(()=>{
-    const t=setTimeout(()=>setSplash(false),2800);
-    return()=>clearTimeout(t);
-  },[]);
+            useEffect(() => {
+                const t = setTimeout(() => setSplash(false), 2800);
+                return () => clearTimeout(t);
+            }, []);
 
-  // PWA install prompt
-  useEffect(()=>{
-    const handler=e=>{e.preventDefault();setDeferredPrompt(e);setShowInstall(true);};
-    window.addEventListener('beforeinstallprompt',handler);
-    return()=>window.removeEventListener('beforeinstallprompt',handler);
-  },[]);
+            // PWA install prompt
+            useEffect(() => {
+                const handler = e => { e.preventDefault(); setDeferredPrompt(e); setShowInstall(true); };
+                window.addEventListener('beforeinstallprompt', handler);
+                return () => window.removeEventListener('beforeinstallprompt', handler);
+            }, []);
 
-  const doInstall=async()=>{
-    if(!deferredPrompt)return;
-    deferredPrompt.prompt();
-    const{outcome}=await deferredPrompt.userChoice;
-    setDeferredPrompt(null);setShowInstall(false);
-  };
+            const doInstall = async () => {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                setDeferredPrompt(null); setShowInstall(false);
+            };
 
-  // Fetch awal times
-  useEffect(()=>{
-    fetch('https://api.aladhan.com/v1/timings?latitude=-26.3189&longitude=27.8355&method=2')
-      .then(r=>r.json()).then(d=>{
-        const H=d.data.date.hijri;
-        if(H)setHijriDate(`${H.day} ${H.month.en} ${H.year} AH`);
-        const T=d.data.timings;
-        const map={fajr_awal:'Fajr',shuruq:'Sunrise',zuhr_awal:'Dhuhr',asr_awal:'Asr',maghrib:'Maghrib',isha_awal:'Isha'};
-        setSalah(prev=>prev.map(s=>map[s.key]&&T[map[s.key]]?{...s,time:T[map[s.key]].slice(0,5)}:s));
-        setTimes([
-          {key:'Fajr',label:'Fajr',arabic:'الفجر',time:T.Fajr?.slice(0,5)||'04:48'},
-          {key:'Sunrise',label:'Shuruq',arabic:'الشروق',time:T.Sunrise?.slice(0,5)||'06:25'},
-          {key:'Dhuhr',label:'Zuhr',arabic:'الظهر',time:T.Dhuhr?.slice(0,5)||'12:58'},
-          {key:'Asr',label:'Asr',arabic:'العصر',time:T.Asr?.slice(0,5)||'16:22'},
-          {key:'Maghrib',label:'Maghrib',arabic:'المغرب',time:T.Maghrib?.slice(0,5)||'19:18'},
-          {key:'Isha',label:'Isha',arabic:'العشاء',time:T.Isha?.slice(0,5)||'20:38'},
-        ]);
-      }).catch(()=>{
-        setTimes([
-          {key:'Fajr',label:'Fajr',arabic:'الفجر',time:'04:48'},
-          {key:'Sunrise',label:'Shuruq',arabic:'الشروق',time:'06:25'},
-          {key:'Dhuhr',label:'Zuhr',arabic:'الظهر',time:'12:58'},
-          {key:'Asr',label:'Asr',arabic:'العصر',time:'16:22'},
-          {key:'Maghrib',label:'Maghrib',arabic:'المغرب',time:'19:18'},
-          {key:'Isha',label:'Isha',arabic:'العشاء',time:'20:38'},
-        ]);
-      });
-  },[]);
+            // Fetch awal times
+            useEffect(() => {
+                fetch('https://api.aladhan.com/v1/timings?latitude=-26.3189&longitude=27.8355&method=2')
+                    .then(r => r.json()).then(d => {
+                        const H = d.data.date.hijri;
+                        if (H) setHijriDate(`${H.day} ${H.month.en} ${H.year} AH`);
+                        const T = d.data.timings;
+                        const map = { fajr_awal: 'Fajr', shuruq: 'Sunrise', zuhr_awal: 'Dhuhr', asr_awal: 'Asr', maghrib: 'Maghrib', isha_awal: 'Isha' };
+                        setSalah(prev => prev.map(s => map[s.key] && T[map[s.key]] ? { ...s, time: T[map[s.key]].slice(0, 5) } : s));
+                        setTimes([
+                            { key: 'Fajr', label: 'Fajr', arabic: 'الفجر', time: T.Fajr?.slice(0, 5) || '04:48' },
+                            { key: 'Sunrise', label: 'Shuruq', arabic: 'الشروق', time: T.Sunrise?.slice(0, 5) || '06:25' },
+                            { key: 'Dhuhr', label: 'Zuhr', arabic: 'الظهر', time: T.Dhuhr?.slice(0, 5) || '12:58' },
+                            { key: 'Asr', label: 'Asr', arabic: 'العصر', time: T.Asr?.slice(0, 5) || '16:22' },
+                            { key: 'Maghrib', label: 'Maghrib', arabic: 'المغرب', time: T.Maghrib?.slice(0, 5) || '19:18' },
+                            { key: 'Isha', label: 'Isha', arabic: 'العشاء', time: T.Isha?.slice(0, 5) || '20:38' },
+                        ]);
+                    }).catch(() => {
+                        setTimes([
+                            { key: 'Fajr', label: 'Fajr', arabic: 'الفجر', time: '04:48' },
+                            { key: 'Sunrise', label: 'Shuruq', arabic: 'الشروق', time: '06:25' },
+                            { key: 'Dhuhr', label: 'Zuhr', arabic: 'الظهر', time: '12:58' },
+                            { key: 'Asr', label: 'Asr', arabic: 'العصر', time: '16:22' },
+                            { key: 'Maghrib', label: 'Maghrib', arabic: 'المغرب', time: '19:18' },
+                            { key: 'Isha', label: 'Isha', arabic: 'العشاء', time: '20:38' },
+                        ]);
+                    });
+            }, []);
 
-  // Live countdown
-  useEffect(()=>{
-    if(!times.length)return;
-    const tick=()=>{
-      const now=new Date(),nm=now.getHours()*3600+now.getMinutes()*60+now.getSeconds();
-      const sorted=[...times].sort((a,b)=>toSecs(a.time)-toSecs(b.time));
-      const nxt=sorted.find(s=>toSecs(s.time)>nm)||sorted[0];
-      setNext(nxt);
-      setTimes(prev=>prev.map(s=>({...s,isNext:s.key===nxt?.key})));
-      const diff=toSecs(nxt.time)>nm?toSecs(nxt.time)-nm:toSecs(nxt.time)+86400-nm;
-      setCd(fmtCd(diff));
-    };
-    tick();const iv=setInterval(tick,1000);return()=>clearInterval(iv);
-  },[times.length]);
+            // Live countdown
+            useEffect(() => {
+                if (!times.length) return;
+                const tick = () => {
+                    const now = new Date(), nm = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+                    const sorted = [...times].sort((a, b) => toSecs(a.time) - toSecs(b.time));
+                    const nxt = sorted.find(s => toSecs(s.time) > nm) || sorted[0];
+                    setNext(nxt);
+                    setTimes(prev => prev.map(s => ({ ...s, isNext: s.key === nxt?.key })));
+                    const diff = toSecs(nxt.time) > nm ? toSecs(nxt.time) - nm : toSecs(nxt.time) + 86400 - nm;
+                    setCd(fmtCd(diff));
+                };
+                tick(); const iv = setInterval(tick, 1000); return () => clearInterval(iv);
+            }, [times.length]);
 
-  const NAV=[{id:'home',icon:'🕌',lbl:'Home'},{id:'plan',icon:'🗓',lbl:'Plan'},{id:'routine',icon:'📿',lbl:'Routine'},{id:'zikr',icon:'☪️',lbl:'Zikr'},{id:'kitab',icon:'📜',lbl:'Kitab'},{id:'tracker',icon:'🌙',lbl:'Tracker'}];
+            const NAV = [{ id: 'home', icon: '🕌', lbl: 'Home' }, { id: 'plan', icon: '🗓', lbl: 'Plan' }, { id: 'routine', icon: '📿', lbl: 'Routine' }, { id: 'zikr', icon: '☪️', lbl: 'Zikr' }, { id: 'kitab', icon: '📜', lbl: 'Kitab' }, { id: 'tracker', icon: '🌙', lbl: 'Tracker' }];
 
-  return(
-    <>
-      <style>{GCSS}</style>
-      <Stars/>
-      <div className="geo"/>
-      <div className={`splash${splash?'':' gone'}`}>
-        <div className="sr"/><div className="sr"/><div className="sr"/>
-        <div className="sa">روضة</div>
-        <div className="sn">Rawdah</div>
-        <div className="st">a garden from the gardens of Jannah</div>
-      </div>
-      <div className="app">
-        <div className="hdr">
-          <div className="hl"><div className="ha">روضة</div><div className="hn">Rawdah</div></div>
-          <div style={{display:'flex',alignItems:'center',gap:10}}>
-            {showInstall&&<div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',background:'rgba(201,168,76,.15)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'5px 10px',color:'var(--gold)',cursor:'pointer'}} onClick={doInstall}>Install App</div>}
-            <div className="hd"><div className="hhi">{hijriDate}</div><div className="hgr">{new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div></div>
-          </div>
-        </div>
-        {nav==='home'    &&<Home times={times} cd={cd} next={next} go={setNav}/>}
-        {nav==='plan'    &&<Planner salah={salah} setSalah={setSalah} go={setNav} jumpDate={jumpDate} setJumpDate={setJumpDate}/>}
-        {nav==='routine' &&<Routine/>}
-        {nav==='zikr'    &&<Zikr/>}
-        {nav==='kitab'   &&<Kitab/>}
-        {nav==='tracker' &&<Tracker onJumpToPlan={(d)=>{setJumpDate(d);setNav('plan');}}/>}
-        <div className="bnav">
-          {NAV.map(n=><div key={n.id} className={`ni${nav===n.id?' on':''}`} onClick={()=>setNav(n.id)}><span className="nic">{n.icon}</span><span className="nil">{n.lbl}</span></div>)}
-        </div>
-      </div>
-    </>
-  );
-}
+            return (
+                <>
+                    <style>{GCSS}</style>
+                    <Stars />
+                    <div className="geo" />
+                    <div className={`splash${splash ? '' : ' gone'}`}>
+                        <div className="sr" /><div className="sr" /><div className="sr" />
+                        <div className="sa">روضة</div>
+                        <div className="sn">Rawdah</div>
+                        <div className="st">a garden from the gardens of Jannah</div>
+                    </div>
+                    <div className="app">
+                        <div className="hdr">
+                            <div className="hl"><div className="ha">روضة</div><div className="hn">Rawdah</div></div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                {showInstall && <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', background: 'rgba(201,168,76,.15)', border: '1px solid rgba(201,168,76,.4)', borderRadius: 8, padding: '5px 10px', color: 'var(--gold)', cursor: 'pointer' }} onClick={doInstall}>Install App</div>}
+                                <div className="hd"><div className="hhi">{hijriDate}</div><div className="hgr">{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div></div>
+                            </div>
+                        </div>
+                        {nav === 'home' && <Home times={times} cd={cd} next={next} go={setNav} />}
+                        {nav === 'plan' && <Planner salah={salah} setSalah={setSalah} go={setNav} jumpDate={jumpDate} setJumpDate={setJumpDate} />}
+                        {nav === 'routine' && <Routine />}
+                        {nav === 'zikr' && <Zikr />}
+                        {nav === 'kitab' && <Kitab />}
+                        {nav === 'tracker' && <Tracker onJumpToPlan={(d) => { setJumpDate(d); setNav('plan'); }} />}
+                        <div className="bnav">
+                            {NAV.map(n => <div key={n.id} className={`ni${nav === n.id ? ' on' : ''}`} onClick={() => setNav(n.id)}><span className="nic">{n.icon}</span><span className="nil">{n.lbl}</span></div>)}
+                        </div>
+                    </div>
+                </>
+            );
+        }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
-</script>
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
 
-<script>
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('./sw.js').then(r=>{
-      console.log('Rawdah SW registered');
-    }).catch(e=>console.log('SW failed:',e));
-  });
-}
-</script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(r => {
+                    console.log('Rawdah SW registered');
+                }).catch(e => console.log('SW failed:', e));
+            });
+        }
+    </script>
 </body>
+
 </html>
