@@ -294,9 +294,36 @@ function Home({times,cd,next,go}){
   );
 }
 
+// ── Layout helpers ──
+const dateKey=d=>new Date(d).toISOString().slice(0,10);
+const addDays=(d,n)=>{const r=new Date(d);r.setDate(r.getDate()+n);return r;};
+const fmtDay=d=>new Date(d).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+const isToday=d=>dateKey(d)===dateKey(new Date());
+
+const layoutBlocks=blocks=>{
+  if(!blocks.length)return[];
+  const sorted=[...blocks].sort((a,b)=>a.start-b.start);
+  const cols=[];
+  const res=sorted.map(b=>{
+    let c=cols.findIndex(e=>e<=b.start);
+    if(c===-1){c=cols.length;cols.push(0);}
+    cols[c]=b.start+b.dur;
+    return{...b,_col:c};
+  });
+  return res.map(b=>{
+    let mc=b._col;
+    res.forEach(o=>{
+      if(o.id!==b.id&&o.start<b.start+b.dur&&o.start+o.dur>b.start)mc=Math.max(mc,o._col);
+    });
+    return{...b,_tc:mc+1};
+  });
+};
+
 // ── PLANNER ──
-function Planner({salah,setSalah,go}){
-  const [blocks,setBlocks]=useState(()=>store.get('rawdah_blocks',null)||DEF_BLOCKS);
+function Planner({salah,setSalah,go,jumpDate,setJumpDate}){
+  const [planDate,setPlanDate]=useState(()=>jumpDate||new Date());
+  const dk=`rawdah_blocks_${dateKey(planDate)}`;
+  const [blocks,setBlocks]=useState(()=>store.get(dk,null)||DEF_BLOCKS);
   const [nowY,setNowY]=useState(mtp(nowM()));
   const [drag,setDrag]=useState(null);
   const [sel,setSel]=useState(null);
@@ -307,10 +334,25 @@ function Planner({salah,setSalah,go}){
   const wrapRef=useRef();const gridRef=useRef();
   const totalH=24*HOUR_H;
 
-  useEffect(()=>{const iv=setInterval(()=>setNowY(mtp(nowM())),30000);return()=>clearInterval(iv);},[]);
-  useEffect(()=>{setTimeout(()=>{if(wrapRef.current)wrapRef.current.scrollTop=Math.max(0,mtp(nowM())-180);},300);},[]);
+  // Handle external jump (from tracker)
+  useEffect(()=>{
+    if(jumpDate){setPlanDate(jumpDate);setJumpDate(null);}
+  },[jumpDate]);
 
-  const saveBlocks=bs=>{setBlocks(bs);store.set('rawdah_blocks',bs);};
+  // Load blocks when date changes
+  useEffect(()=>{
+    const stored=store.get(`rawdah_blocks_${dateKey(planDate)}`,null);
+    setBlocks(stored||store.get('rawdah_tpl',null)||DEF_BLOCKS);
+    setTimeout(()=>{
+      if(wrapRef.current)wrapRef.current.scrollTop=isToday(planDate)?Math.max(0,mtp(nowM())-180):mtp(4*60);
+    },100);
+  },[dateKey(planDate)]);
+
+  useEffect(()=>{const iv=setInterval(()=>setNowY(mtp(nowM())),30000);return()=>clearInterval(iv);},[]);
+
+  const saveBlocks=bs=>{setBlocks(bs);store.set(`rawdah_blocks_${dateKey(planDate)}`,bs);};
+
+  const navDay=n=>{const d=addDays(planDate,n);setPlanDate(d);};
 
   const onDS=(e,id)=>{
     e.stopPropagation();
@@ -328,7 +370,7 @@ function Planner({salah,setSalah,go}){
     const snapped=Math.max(0,Math.min(1425,ptm((cy-rect.top+st)-drag.offsetY)));
     setBlocks(prev=>prev.map(b=>b.id===drag.id?{...b,start:snapped}:b));
   };
-  const onDE=()=>{if(drag){store.set('rawdah_blocks',blocks);}setDrag(null);};
+  const onDE=()=>{if(drag){store.set(`rawdah_blocks_${dateKey(planDate)}`,blocks);}setDrag(null);};
 
   const doAdd=()=>{
     if(!nb.title.trim())return;
@@ -337,7 +379,7 @@ function Planner({salah,setSalah,go}){
   };
 
   const saveTpl=()=>{store.set('rawdah_tpl',blocks);setToast('Template saved 🤍');setTimeout(()=>setToast(''),2500);};
-  const resetTpl=()=>{const tpl=store.get('rawdah_tpl',null);if(tpl){saveBlocks(tpl);setToast('Template loaded');setTimeout(()=>setToast(''),2000);}};
+  const resetTpl=()=>{const tpl=store.get('rawdah_tpl',null)||DEF_BLOCKS;saveBlocks(tpl);setToast('Day reset to template');setTimeout(()=>setToast(''),2000);};
 
   const handleBlockTap=b=>{
     if(!drag){
@@ -346,26 +388,37 @@ function Planner({salah,setSalah,go}){
     }
   };
 
+  const laidOut=layoutBlocks(blocks);
+
   const G='var(--gold)',B='var(--br)';
   return(
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
-      <div style={{padding:'12px 16px 10px',borderBottom:`1px solid ${B}`,background:'rgba(2,9,18,.97)',flexShrink:0}}>
-        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:8}}>
-          <div>
-            <div style={{fontFamily:"'Cinzel',serif",fontSize:14,letterSpacing:.5,marginBottom:1}}>يَوْمُكَ — Your Day</div>
-            <div style={{fontSize:9,color:'var(--td)',letterSpacing:1}}>{new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</div>
+      <div style={{padding:'10px 14px 8px',borderBottom:`1px solid ${B}`,background:'rgba(2,9,18,.97)',flexShrink:0}}>
+        {/* Date nav row */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(255,255,255,.05)',border:`1px solid ${B}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:14,color:'var(--ts)'}} onClick={()=>navDay(-1)}>‹</div>
+            <div>
+              <div style={{fontFamily:"'Cinzel',serif",fontSize:13,letterSpacing:.5,color:isToday(planDate)?G:'var(--tp)'}}>
+                {isToday(planDate)?'Today':fmtDay(planDate)}
+              </div>
+              <div style={{fontSize:9,color:'var(--td)',letterSpacing:.5}}>{new Date(planDate).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div>
+            </div>
+            <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(255,255,255,.05)',border:`1px solid ${B}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:14,color:'var(--ts)'}} onClick={()=>navDay(1)}>›</div>
+            {!isToday(planDate)&&<div style={{fontSize:9,padding:'3px 8px',borderRadius:8,background:'rgba(201,168,76,.12)',border:`1px solid ${B}`,color:G,cursor:'pointer'}} onClick={()=>setPlanDate(new Date())}>Today</div>}
           </div>
-          <div style={{display:'flex',gap:6}}>
-            <div style={{background:'rgba(91,155,213,.1)',border:'1px solid rgba(91,155,213,.3)',borderRadius:9,padding:'5px 11px',fontSize:9,color:'#5B9BD5',cursor:'pointer',letterSpacing:1.5,textTransform:'uppercase'}} onClick={()=>setJOpen(true)}>Jamaat</div>
-            <div style={{background:'rgba(201,168,76,.12)',border:`1px solid ${B}`,borderRadius:9,padding:'5px 11px',fontSize:9,color:G,cursor:'pointer',letterSpacing:1.5,textTransform:'uppercase'}} onClick={saveTpl}>Save ♡</div>
-            <div style={{background:'rgba(255,255,255,.04)',border:`1px solid ${B}`,borderRadius:9,padding:'5px 11px',fontSize:9,color:'var(--td)',cursor:'pointer',letterSpacing:1.5,textTransform:'uppercase'}} onClick={resetTpl}>Reset</div>
+          <div style={{display:'flex',gap:5}}>
+            <div style={{background:'rgba(91,155,213,.1)',border:'1px solid rgba(91,155,213,.3)',borderRadius:9,padding:'4px 9px',fontSize:8,color:'#5B9BD5',cursor:'pointer',letterSpacing:1.5,textTransform:'uppercase'}} onClick={()=>setJOpen(true)}>Jamaat</div>
+            <div style={{background:'rgba(201,168,76,.12)',border:`1px solid ${B}`,borderRadius:9,padding:'4px 9px',fontSize:8,color:G,cursor:'pointer',letterSpacing:1.5,textTransform:'uppercase'}} onClick={saveTpl}>Save ♡</div>
+            <div style={{background:'rgba(255,255,255,.04)',border:`1px solid ${B}`,borderRadius:9,padding:'4px 9px',fontSize:8,color:'var(--td)',cursor:'pointer',letterSpacing:1.5,textTransform:'uppercase'}} onClick={resetTpl}>Reset</div>
           </div>
         </div>
+        {/* Salah strip */}
         <div style={{display:'flex',gap:5,overflowX:'auto',paddingBottom:2}}>
           {salah.map(s=>(
-            <div key={s.key} style={{flexShrink:0,border:`1px solid ${s.jamaat?'rgba(91,155,213,.3)':'rgba(201,168,76,.15)'}`,borderRadius:8,padding:'5px 9px',textAlign:'center',minWidth:48,background:s.jamaat?'rgba(91,155,213,.06)':'rgba(255,255,255,.03)'}}>
-              <div style={{fontFamily:"'Amiri',serif",fontSize:s.jamaat?9:12,color:s.jamaat?'#5B9BD5':G,lineHeight:1,marginBottom:1,letterSpacing:s.jamaat?1:0,textTransform:s.jamaat?'uppercase':'none'}}>{s.jamaat?'J':(s.arabic||s.label.charAt(0))}</div>
-              <div style={{fontFamily:"'Cinzel',serif",fontSize:10,color:'var(--tp)'}}>{s.time}</div>
+            <div key={s.key} style={{flexShrink:0,border:`1px solid ${s.jamaat?'rgba(91,155,213,.3)':'rgba(201,168,76,.15)'}`,borderRadius:8,padding:'4px 8px',textAlign:'center',minWidth:44,background:s.jamaat?'rgba(91,155,213,.06)':'rgba(255,255,255,.03)'}}>
+              <div style={{fontFamily:"'Amiri',serif",fontSize:s.jamaat?8:11,color:s.jamaat?'#5B9BD5':G,lineHeight:1,marginBottom:1,letterSpacing:s.jamaat?1:0,textTransform:s.jamaat?'uppercase':'none'}}>{s.jamaat?'J':(s.arabic||s.label.charAt(0))}</div>
+              <div style={{fontFamily:"'Cinzel',serif",fontSize:9,color:'var(--tp)'}}>{s.time}</div>
             </div>
           ))}
         </div>
@@ -394,19 +447,33 @@ function Planner({salah,setSalah,go}){
               <div style={{position:'absolute',left:-3,width:7,height:7,borderRadius:'50%',background:'#E84040',transform:'translateY(-3px)'}}/>
               <div style={{position:'absolute',left:4,right:0,height:1,background:'rgba(232,64,64,.5)'}}/>
             </div>
-            {blocks.map(b=>{
+            {laidOut.map(b=>{
               const cat=CATS[b.cat]||CATS.custom;
               const top=mtp(b.start),height=Math.max(SLOT_H,mtp(b.dur));
               const isDrag=drag?.id===b.id,small=height<36;
               const hasLink=!!b.link;
-              return<div key={b.id} style={{position:'absolute',left:2,right:2,top,height,background:cat.bg,border:`1px solid ${cat.border}`,borderRadius:10,display:'flex',overflow:'hidden',cursor:hasLink?'pointer':'pointer',zIndex:isDrag?20:4,boxShadow:isDrag?'0 10px 40px rgba(0,0,0,.7)':undefined,opacity:isDrag?0.92:1}} onClick={()=>handleBlockTap(b)}>
-                <div style={{width:20,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',cursor:'grab',fontSize:10,color:'rgba(255,255,255,.25)',touchAction:'none'}}
+              const colW=100/b._tc;
+              const colL=b._col*colW;
+              return<div key={b.id} style={{
+                position:'absolute',
+                left:`calc(${colL}% + 2px)`,
+                width:`calc(${colW}% - 4px)`,
+                top,height,
+                background:cat.bg,
+                border:`1px solid ${cat.border}`,
+                borderRadius:10,display:'flex',overflow:'hidden',
+                cursor:'pointer',
+                zIndex:isDrag?20:4,
+                boxShadow:isDrag?'0 10px 40px rgba(0,0,0,.7)':b._tc>1?'0 2px 8px rgba(0,0,0,.4)':undefined,
+                opacity:isDrag?0.92:1
+              }} onClick={()=>handleBlockTap(b)}>
+                <div style={{width:16,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',cursor:'grab',fontSize:9,color:'rgba(255,255,255,.2)',touchAction:'none'}}
                   onMouseDown={e=>onDS(e,b.id)} onTouchStart={e=>onDS(e,b.id)} onClick={e=>e.stopPropagation()}>⠿</div>
-                <div style={{flex:1,padding:'5px 6px 5px 2px',minWidth:0,display:'flex',flexDirection:'column',justifyContent:'center'}}>
-                  <div style={{fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:.3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',color:cat.color}}>{b.title}{hasLink?'  →':''}</div>
-                  {!small&&<div style={{fontSize:8,opacity:.6,letterSpacing:.5,marginTop:1}}>{fmtT(b.start)} – {fmtT(b.start+b.dur)}</div>}
+                <div style={{flex:1,padding:'4px 4px 4px 0',minWidth:0,display:'flex',flexDirection:'column',justifyContent:'center',overflow:'hidden'}}>
+                  <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:.2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',color:cat.color}}>{b.title}{hasLink?' →':''}</div>
+                  {!small&&<div style={{fontSize:7,opacity:.55,letterSpacing:.3,marginTop:1,whiteSpace:'nowrap'}}>{fmtT(b.start)}–{fmtT(b.start+b.dur)}</div>}
                 </div>
-                {!small&&<div style={{padding:'5px 6px 0 0',fontSize:13,flexShrink:0}}>{cat.icon}</div>}
+                {!small&&b._tc===1&&<div style={{padding:'4px 4px 0 0',fontSize:11,flexShrink:0}}>{cat.icon}</div>}
               </div>;
             })}
           </div>
@@ -671,7 +738,7 @@ function Kitab(){
 }
 
 // ── TRACKER ──
-function Tracker(){
+function Tracker({onJumpToPlan}){
   const dk=`rawdah_tracker_${todayKey()}`;
   const [tog,setTog]=useState(()=>store.get(dk,{}));
   const toggle=id=>{const n={...tog,[id]:!tog[id]};setTog(n);store.set(dk,n);};
@@ -735,7 +802,13 @@ function Tracker(){
         <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:5}}>
           {cells.map((c,i)=>{
             const styles={emp:{background:'transparent',border:'none'},pst:{background:'rgba(109,179,138,.15)',border:'1px solid rgba(109,179,138,.2)',color:'var(--gr)'},tod:{background:'rgba(201,168,76,.15)',border:`1px solid ${G}`,color:G},fut:{background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)',color:'var(--td)'},mis:{background:'rgba(180,80,80,.1)',border:'1px solid rgba(180,80,80,.15)',color:'rgba(180,80,80,.6)'}};
-            return<div key={i} style={{aspectRatio:1,borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontFamily:"'Cinzel',serif",...styles[c.t]}}>{c.d||''}</div>;
+            const canTap=c.t!=='emp'&&c.d;
+            const handleTap=()=>{
+              if(!canTap)return;
+              const d=new Date(today.getFullYear(),today.getMonth(),c.d);
+              onJumpToPlan(d);
+            };
+            return<div key={i} style={{aspectRatio:1,borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontFamily:"'Cinzel',serif",cursor:canTap?'pointer':'default',...styles[c.t]}} onClick={handleTap}>{c.d||''}</div>;
           })}
         </div>
         <div style={{display:'flex',gap:12,marginTop:12,flexWrap:'wrap'}}>
@@ -767,13 +840,13 @@ const GCSS=`
 .hdr{padding:13px 20px 11px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--br);background:linear-gradient(180deg,rgba(2,9,18,.97),rgba(6,15,30,.85));backdrop-filter:blur(12px);animation:fi 1s 2.2s forwards;opacity:0;flex-shrink:0;}
 .hl{display:flex;align-items:center;gap:10px;}.ha{font-family:'Amiri',serif;font-size:26px;color:var(--gold);line-height:1;}.hn{font-family:'Cinzel',serif;font-size:13px;letter-spacing:3px;}
 .hd{text-align:right;}.hhi{font-family:'Amiri',serif;font-size:13px;color:var(--gold);line-height:1.3;}.hgr{font-size:9px;color:var(--td);letter-spacing:1px;}
-.cnt{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 0 86px;scroll-behavior:smooth;animation:fi 1s 2.4s forwards;opacity:0;}.cnt::-webkit-scrollbar{display:none;}
+.cnt{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 0 calc(86px + env(safe-area-inset-bottom));scroll-behavior:smooth;animation:fi 1s 2.4s forwards;opacity:0;}.cnt::-webkit-scrollbar{display:none;}
 .scr{animation:su .35s ease forwards;}
 .bism{text-align:center;padding:20px 20px 4px;font-family:'Amiri',serif;font-size:24px;color:var(--gold);opacity:.45;direction:rtl;}
 .slbl{padding:18px 18px 7px;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);opacity:.7;}
 .hero{margin:16px 16px 0;background:linear-gradient(135deg,#0A1628,#071020 60%,#0D1A30);border:1px solid var(--br);border-radius:20px;padding:22px 20px 18px;position:relative;overflow:hidden;}
 .hero::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(201,168,76,.07),transparent 70%);border-radius:50%;}
-.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(2,9,18,.94);backdrop-filter:blur(20px);border-top:1px solid var(--br);display:flex;align-items:center;justify-content:space-around;padding:10px 4px 18px;z-index:50;animation:fi 1s 2.6s forwards;opacity:0;}
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(2,9,18,.96);backdrop-filter:blur(20px);border-top:1px solid var(--br);display:flex;align-items:center;justify-content:space-around;padding:10px 4px calc(14px + env(safe-area-inset-bottom));z-index:50;animation:fi 1s 2.6s forwards;opacity:0;}
 .ni{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;flex:1;padding:5px 0;transition:all .2s;}.ni:active{transform:scale(.9);}
 .nic{font-size:18px;}.nil{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);transition:all .2s;}
 .ni.on .nil{color:var(--gold);}.ni.on .nic{filter:drop-shadow(0 0 6px rgba(201,168,76,.5));}
@@ -788,6 +861,8 @@ function App(){
   const [cd,setCd]=useState('——:——:——');
   const [next,setNext]=useState(null);
   const [salah,setSalah]=useState(()=>store.get('rawdah_jamaat',null)||DEF_SALAH);
+  const [hijriDate,setHijriDate]=useState(getHijri());
+  const [jumpDate,setJumpDate]=useState(null);
   const [deferredPrompt,setDeferredPrompt]=useState(null);
   const [showInstall,setShowInstall]=useState(false);
 
@@ -814,6 +889,8 @@ function App(){
   useEffect(()=>{
     fetch('https://api.aladhan.com/v1/timings?latitude=-26.3189&longitude=27.8355&method=2')
       .then(r=>r.json()).then(d=>{
+        const H=d.data.date.hijri;
+        if(H)setHijriDate(`${H.day} ${H.month.en} ${H.year} AH`);
         const T=d.data.timings;
         const map={fajr_awal:'Fajr',shuruq:'Sunrise',zuhr_awal:'Dhuhr',asr_awal:'Asr',maghrib:'Maghrib',isha_awal:'Isha'};
         setSalah(prev=>prev.map(s=>map[s.key]&&T[map[s.key]]?{...s,time:T[map[s.key]].slice(0,5)}:s));
@@ -870,15 +947,15 @@ function App(){
           <div className="hl"><div className="ha">روضة</div><div className="hn">Rawdah</div></div>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             {showInstall&&<div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',background:'rgba(201,168,76,.15)',border:'1px solid rgba(201,168,76,.4)',borderRadius:8,padding:'5px 10px',color:'var(--gold)',cursor:'pointer'}} onClick={doInstall}>Install App</div>}
-            <div className="hd"><div className="hhi">{getHijri()}</div><div className="hgr">{new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div></div>
+            <div className="hd"><div className="hhi">{hijriDate}</div><div className="hgr">{new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div></div>
           </div>
         </div>
         {nav==='home'    &&<Home times={times} cd={cd} next={next} go={setNav}/>}
-        {nav==='plan'    &&<Planner salah={salah} setSalah={setSalah} go={setNav}/>}
+        {nav==='plan'    &&<Planner salah={salah} setSalah={setSalah} go={setNav} jumpDate={jumpDate} setJumpDate={setJumpDate}/>}
         {nav==='routine' &&<Routine/>}
         {nav==='zikr'    &&<Zikr/>}
         {nav==='kitab'   &&<Kitab/>}
-        {nav==='tracker' &&<Tracker/>}
+        {nav==='tracker' &&<Tracker onJumpToPlan={(d)=>{setJumpDate(d);setNav('plan');}}/>}
         <div className="bnav">
           {NAV.map(n=><div key={n.id} className={`ni${nav===n.id?' on':''}`} onClick={()=>setNav(n.id)}><span className="nic">{n.icon}</span><span className="nil">{n.lbl}</span></div>)}
         </div>
